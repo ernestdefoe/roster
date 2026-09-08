@@ -1,0 +1,39 @@
+ernestdefoe-roster:
+  forum:
+    title: Roster
+    intro: Every team, roster and player. Pick a club to see who is on it.
+    empty: Nothing has been synced yet. An administrator picks the leagues to carry, and the fixtures arrive on the next hourly sync.
+    no_team: There is no club at this address.
+    no_roster: No roster has been fetched for this club yet.
+
+    team_count: "{count} team|{count} teams"
+
+    jersey: "No."
+    player: Player
+    position: Position
+    class: Class
+    height: Height
+    weight: Weight
+    hometown: Hometown
+
+    group:
+      offense: Offence
+      defense: Defence
+      specialists: Specialists
+      other: Other
+
+    class_year:
+      freshman: Freshman
+      sophomore: Sophomore
+      junior: Junior
+      senior: Senior
+      super_senior: Super senior
+
+  admin:
+    leagues_label: Leagues to carry
+    leagues_help: >-
+      College football is always here — it is what this is, and it comes from
+      CollegeFootballData. Tick any others to carry as well. Those come from
+      ESPN, which needs no key and costs nothing against your allowance, and
+      they bring a current roster rather than a season-by-season history: there
+      is no recruiting class or transfer portal in professional sport.

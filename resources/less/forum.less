@@ -1,0 +1,119 @@
+// Roster.
+//
+// 🚨 Every colour is a Flarum variable, never a literal. This has to sit inside
+// whatever theme the site runs — Bespoke, a custom one, or core's default — and
+// a hardcoded grey is the thing that looks wrong on somebody else's dark mode.
+.RosterPage {
+  padding: 24px 0 48px;
+
+  &-head { margin-bottom: 24px; }
+  &-intro { color: var(--muted-color); margin: 4px 0 0; }
+  &-empty { color: var(--muted-color); }
+
+  // The league switcher wraps rather than scrolls: the list is short, and a
+  // horizontal scroller for six buttons hides half of them on a phone.
+  &-leagues {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+  }
+}
+
+.RosterConference {
+  margin-top: 32px;
+
+  h2 {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 18px;
+    margin: 0 0 12px;
+  }
+}
+
+.RosterConference-count {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted-color);
+}
+
+.RosterGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.RosterCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--border-radius, 8px);
+  background: var(--body-bg);
+  border: 1px solid var(--control-bg);
+  color: var(--text-color);
+
+  // 🚨 No underline on hover anywhere here. These are mostly crest tiles and
+  // table rows, and an underline on a card reads as a broken link.
+  &:hover { text-decoration: none; border-color: var(--primary-color); }
+
+  &-crest { width: 34px; height: 34px; object-fit: contain; flex: 0 0 34px; }
+  &-crest--none { background: var(--control-bg); border-radius: 50%; }
+  &-name { display: flex; flex-direction: column; font-weight: 600; line-height: 1.25; }
+  &-mascot { font-weight: 400; font-size: 12px; color: var(--muted-color); }
+}
+
+.RosterTeam-back { display: inline-block; margin-bottom: 12px; font-size: 13px; }
+
+.RosterTeam-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px;
+  border-radius: var(--border-radius, 8px);
+  background: var(--body-bg);
+  border: 1px solid var(--control-bg);
+
+  h1 { margin: 0; font-size: 26px; }
+  h1 small { font-weight: 400; font-size: 15px; color: var(--muted-color); }
+}
+
+.RosterTeam-crest { width: 64px; height: 64px; object-fit: contain; }
+.RosterTeam-conference { margin: 4px 0 0; color: var(--muted-color); }
+
+.RosterGroup {
+  margin-top: 28px;
+
+  h3 { font-size: 16px; margin: 0 0 8px; }
+}
+
+// 🚨 The table scrolls inside its own container. A roster is seven columns and
+// the page body must never scroll sideways on a phone.
+.RosterTable-scroll { overflow-x: auto; }
+
+.RosterTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+
+  th {
+    text-align: left;
+    font-size: 11px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--muted-color);
+    padding: 6px 10px;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 8px 10px;
+    border-top: 1px solid var(--control-bg);
+    white-space: nowrap;
+  }
+
+  &-num { color: var(--muted-color); font-variant-numeric: tabular-nums; }
+  &-name { font-weight: 600; }
+}

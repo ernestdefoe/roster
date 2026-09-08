@@ -1,0 +1,38 @@
+{
+    "name": "ernestdefoe/roster",
+    "description": "Every team, roster and player in one place. Browse by conference or division, open a club for its roster, then open a player for who he is. College football from CollegeFootballData; the NFL, NBA, MLB, NHL and league football from ESPN, which needs no key.",
+    "type": "flarum-extension",
+    "keywords": ["flarum", "extension", "roster", "college football", "nfl", "nba", "mlb", "nhl", "sports"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Ernest Defoe",
+            "email": "ernestdefoe@gmail.com"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/ernestdefoe/roster/issues",
+        "source": "https://github.com/ernestdefoe/roster"
+    },
+    "require": {
+        "php": "^8.3",
+        "flarum/core": "^2.0",
+        "guzzlehttp/guzzle": "^7.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "ErnestDefoe\\Roster\\": "src/"
+        }
+    },
+    "extra": {
+        "flarum-extension": {
+            "title": "Roster",
+            "category": "feature",
+            "icon": {
+                "name": "fas fa-users",
+                "backgroundColor": "#1f2a37",
+                "color": "#fff"
+            }
+        }
+    }
+}
