@@ -83,15 +83,16 @@ export default class RosterIndexPage extends Page {
                 <h2>
                   {group.conference}
                   {/*
-                    🚨 `transChoice`, not `trans`. A pluralised string handed to
-                    `trans` renders BOTH halves — "18 team|18 teams" — because
-                    nothing picks a branch. It looks like a broken template and
-                    is a one-word fix.
+                    🚨 `trans` with a `count` parameter, and the plural lives in
+                    the STRING as ICU MessageFormat. Flarum 2's translator has
+                    no `transChoice` at all — calling it throws inside `view()`,
+                    which does not show an error: the redraw simply never lands
+                    and the page sits on its spinner for ever. And the pipe form
+                    ("# team|# teams") is Laravel's, not ICU's: `trans` renders
+                    both halves of it verbatim.
                   */}
                   <span className="RosterConference-count">
-                    {app.translator.transChoice('ernestdefoe-roster.forum.team_count', group.teams.length, {
-                      count: group.teams.length,
-                    })}
+                    {app.translator.trans('ernestdefoe-roster.forum.team_count', { count: group.teams.length })}
                   </span>
                 </h2>
                 <div className="RosterGrid">

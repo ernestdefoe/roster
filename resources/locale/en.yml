@@ -6,7 +6,7 @@ ernestdefoe-roster:
     no_team: There is no club at this address.
     no_roster: No roster has been fetched for this club yet.
 
-    team_count: "{count} team|{count} teams"
+    team_count: "{count, plural, one {# team} other {# teams}}"
 
     jersey: "No."
     player: Player
