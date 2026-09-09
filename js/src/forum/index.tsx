@@ -3,10 +3,14 @@ import { extend } from 'flarum/common/extend';
 import IndexSidebar from 'flarum/forum/components/IndexSidebar';
 import LinkButton from 'flarum/common/components/LinkButton';
 
+import registerBlocks from './blocks';
 import RosterIndexPage from './components/RosterIndexPage';
 import RosterTeamPage from './components/RosterTeamPage';
 
 app.initializers.add('ernestdefoe-roster', () => {
+  // The crest wall, offered to Page Builder. Registration only.
+  registerBlocks();
+
   app.routes['roster.index'] = { path: '/roster', component: RosterIndexPage };
   app.routes['roster.team'] = { path: '/roster/:slug', component: RosterTeamPage };
 

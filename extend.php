@@ -9,7 +9,7 @@ use ErnestDefoe\Roster\Service\Leagues\Leagues;
 use Flarum\Extend;
 use Flarum\Frontend\Document;
 
-return [
+$extenders = [
     /*
      * 🚨 The routes are registered on the FRONTEND as well as the API. Without
      * the frontend route a visitor who opens /roster directly — from a link, a
@@ -53,3 +53,22 @@ return [
             $event->hourly()->withoutOverlapping();
         }),
 ];
+
+/*
+ * The crest wall as a Page Builder block — only where Page Builder is present.
+ *
+ * 🚨 Guarded on the EXTENDER's class, not on the extension being enabled. This
+ * file is read at boot, before anything knows which extensions are on, and
+ * naming a class from an extension that is not installed is a fatal at compile
+ * time rather than a missing block. The block class is never mentioned outside
+ * this branch for the same reason: it extends a base class that would not be
+ * there to extend.
+ */
+if (class_exists(\Ernestdefoe\PageBuilder\Extend\PageBuilderBlock::class)) {
+    $extenders[] = new \Ernestdefoe\PageBuilder\Extend\PageBuilderBlock(
+        \ErnestDefoe\Roster\Block\CrestWallBlock::class
+    );
+}
+
+return $extenders;
+

@@ -117,3 +117,157 @@
   &-num { color: var(--muted-color); font-variant-numeric: tabular-nums; }
   &-name { font-weight: 600; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   The crest wall.
+
+   🚨 Every club in the competition, moving slowly, at full strength. A wall of
+   marks is the one thing that says "all of college football" faster than any
+   sentence — and the crests are the site's biggest visual asset, so they are
+   drawn at full opacity rather than ghosted into a background.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.RosterCrests {
+  position: relative;
+  padding: 26px 0 18px;
+  overflow: hidden;
+}
+
+.RosterCrests-wall {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  /*
+   * 🚨 Faded at both edges with a mask rather than a gradient overlay. An
+   * overlay would need to know the page's background colour, which changes
+   * with the theme; a mask makes the crests themselves transparent and works
+   * on any ground.
+   */
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+.RosterCrests-row {
+  display: flex;
+  overflow: hidden;
+}
+
+.RosterCrests-track {
+  display: flex;
+  align-items: center;
+  gap: 34px;
+  padding-right: 34px;
+  // 🚨 Half the width, because the list is rendered twice — see the component.
+  animation: roster-crest-scroll 90s linear infinite;
+  will-change: transform;
+}
+
+.RosterCrests-row--reverse .RosterCrests-track {
+  animation-direction: reverse;
+}
+
+@keyframes roster-crest-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* Held still while somebody is reading it or reaching for a crest. */
+.RosterCrests:hover .RosterCrests-track,
+.RosterCrests:focus-within .RosterCrests-track {
+  animation-play-state: paused;
+}
+
+.RosterCrests-crest {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+  // Grayscale at rest so a hundred and thirty-eight clashing palettes read as
+  // one texture; full colour for the one under the pointer.
+  filter: grayscale(1);
+  opacity: .55;
+  transition: opacity .16s ease, filter .16s ease, transform .16s ease;
+
+  &:hover,
+  &:focus-visible {
+    filter: none;
+    opacity: 1;
+    transform: scale(1.16);
+  }
+}
+
+.RosterCrests-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+// One ground at a time; see the component for why both travel.
+.RosterCrests-img--dark { display: none; }
+
+html[data-theme='dark'] .RosterCrests {
+  .RosterCrests-img--light { display: none; }
+  .RosterCrests-img--dark { display: block; }
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme='light']) .RosterCrests {
+    .RosterCrests-img--light { display: none; }
+    .RosterCrests-img--dark { display: block; }
+  }
+}
+
+.RosterCrests-caption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 18px;
+  text-align: center;
+}
+
+.RosterCrests-captionText {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.RosterCrests-counts {
+  font-size: .88rem;
+  color: var(--muted-color);
+  font-variant-numeric: tabular-nums;
+
+  b {
+    color: var(--primary-color);
+    font-weight: 800;
+  }
+}
+
+.RosterCrests-dot { margin: 0 8px; opacity: .5; }
+
+/*
+ * 🚨 Still, for a reader who has asked the machine to stop moving things. Not
+ * slower — stopped, and laid out as a wrap so the whole wall is still there to
+ * look at rather than a single frozen row.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .RosterCrests-track {
+    animation: none;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 22px;
+  }
+
+  .RosterCrests-row { overflow: visible; }
+
+  // The duplicate copy is decoration; without motion it is just repetition.
+  .RosterCrests-track > *:nth-child(2) { display: none; }
+}
+
+@media (max-width: 767px) {
+  .RosterCrests-crest { width: 44px; height: 44px; }
+  .RosterCrests-track { gap: 22px; padding-right: 22px; }
+}
