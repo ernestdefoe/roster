@@ -252,11 +252,11 @@ class RosterSync
             $key = trim($key);
 
             /*
-             * 🚨 College football is never in this list even if somebody puts
-             * it there. It is CollegeFootballData's, and syncing it from ESPN
-             * would overwrite a season-by-season history with a current roster.
+             * Every league here is one somebody ticked. College football used
+             * to be excluded by name — see the note in Leagues — which left it
+             * permanently on and permanently empty at the same time.
              */
-            if ($key !== '' && $key !== Leagues::DEFAULT && $this->leagues->has($key)) {
+            if ($key !== '' && $this->leagues->has($key)) {
                 $out[$key] = $key;
             }
         }

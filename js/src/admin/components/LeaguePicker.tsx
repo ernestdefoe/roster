@@ -20,9 +20,11 @@ interface Attrs {
 /**
  * Which competitions get rosters, as tick boxes over one comma-joined setting.
  *
- * 🚨 College football is deliberately absent. It is CollegeFootballData's, not
- * ESPN's, and it is not optional — offering it here as a box would suggest it
- * can be switched off, and unticking it would silently do nothing.
+ * 🚨 Every league is a box, college football included. It used to be filtered
+ * out of this list as "always on" — while the only sync there is skipped it by
+ * name, so it was simultaneously impossible to switch off and impossible to
+ * fill. A board following professional soccer has no use for the NCAA and now
+ * simply does not tick it.
  */
 export default class LeaguePicker extends Component<Attrs> {
   chosen(): string[] {
@@ -47,7 +49,7 @@ export default class LeaguePicker extends Component<Attrs> {
      */
     const registry: Record<string, string> = (app.data as any)?.rosterLeagues ?? {};
     const chosen = this.chosen();
-    const keys = Object.keys(registry).filter((key) => key !== 'cfb');
+    const keys = Object.keys(registry);
 
     return (
       <div className="Form-group RosterLeagues">

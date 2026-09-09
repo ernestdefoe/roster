@@ -14,10 +14,10 @@ A club's roster, grouped the way the sport groups it:
 
 | League | Source | What you get |
 |---|---|---|
-| College football | CollegeFootballData | Rosters with class years |
+| College football | ESPN | Rosters with class years |
 | NFL, NBA, MLB, NHL, MLS, Premier League, WNBA | ESPN | The current roster, with position, number, size and hometown |
 
-College football is always on. The rest are tick boxes in **Admin → Roster**,
+Every competition is a tick box in **Admin → Roster**,
 and they cost nothing: ESPN needs no API key.
 
 ```sh

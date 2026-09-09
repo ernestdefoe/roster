@@ -32,11 +32,10 @@ ernestdefoe-roster:
   admin:
     leagues_label: Leagues to carry
     leagues_help: >-
-      College football is always here — it is what this is, and it comes from
-      CollegeFootballData. Tick any others to carry as well. Those come from
-      ESPN, which needs no key and costs nothing against your allowance, and
-      they bring a current roster rather than a season-by-season history: there
-      is no recruiting class or transfer portal in professional sport.
+      Tick the competitions this site should carry rosters for. They all come
+      from ESPN, which needs no key and costs nothing against your allowance.
+      College football brings a class year with it; professional leagues have
+      no class, so that column stays empty for them.
     leagues_empty: >-
       No leagues were sent by the server. That is a broken install rather than
       an empty list — every build ships at least the ESPN competitions.

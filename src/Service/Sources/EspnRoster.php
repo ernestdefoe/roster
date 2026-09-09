@@ -271,8 +271,38 @@ class EspnRoster
             'home_state' => (string) ($birthPlace['state'] ?? ''),
             'home_country' => (string) ($birthPlace['country'] ?? ''),
             'college' => (string) ((is_array($athlete['college'] ?? null) ? $athlete['college'] : [])['name'] ?? ''),
+            /*
+             * 🚨 The class, where the sport has one. ESPN sends it as
+             * `experience.years` — 1 for a freshman through to 5 — beside a
+             * display value this deliberately does not store: "Freshman" is
+             * English, and the number is what the locale file turns into a word
+             * the reader can read. Null everywhere else, because a professional
+             * has no class and a 1 stored for one would say "Freshman" under a
+             * thirty-year-old.
+             */
+            'class_year' => $this->classYear($athlete['experience'] ?? null),
             'headshot' => (string) ((is_array($athlete['headshot'] ?? null) ? $athlete['headshot'] : [])['href'] ?? ''),
         ];
+    }
+
+    /** ESPN's `experience` block, as the 1–5 the column holds. */
+    private function classYear(mixed $experience): ?int
+    {
+        if (! is_array($experience)) {
+            return null;
+        }
+
+        $years = $experience['years'] ?? null;
+
+        if (! is_numeric($years)) {
+            return null;
+        }
+
+        $years = (int) $years;
+
+        // Anything outside the range is a value this does not understand, and
+        // a clamped guess would be a class year invented rather than reported.
+        return $years >= 1 && $years <= 5 ? $years : null;
     }
 
     private function number(mixed $value): ?int

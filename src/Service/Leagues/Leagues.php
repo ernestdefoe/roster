@@ -38,7 +38,21 @@ class Leagues
          * which ESPN's roster endpoint answers — and it is what every existing
          * install already holds.
          */
-        $this->register(new League('cfb', 'College football', 'cfbd', '', true));
+        /*
+         * 🚨 An ordinary league, ticked or not like every other.
+         *
+         * It used to be registered as always-on and sourced from
+         * CollegeFootballData — and this extension has never had a
+         * CollegeFootballData source, only the ESPN one. So college football
+         * was forced on every install that would never want it (a professional
+         * soccer board has no use for the NCAA) AND could never be filled,
+         * because the only sync there is skipped it by name.
+         *
+         * ESPN answers college football rosters at the path below, in the same
+         * grouped shape it uses for the NFL, and it carries the class year —
+         * which is the one thing the collegiate flag below is about.
+         */
+        $this->register(new League('cfb', 'College football', 'espn', 'football/college-football', true));
 
         $this->register(new League('nfl', 'NFL', 'espn', 'football/nfl'));
         $this->register(new League('nba', 'NBA', 'espn', 'basketball/nba'));
