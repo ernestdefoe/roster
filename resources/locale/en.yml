@@ -37,3 +37,6 @@ ernestdefoe-roster:
       ESPN, which needs no key and costs nothing against your allowance, and
       they bring a current roster rather than a season-by-season history: there
       is no recruiting class or transfer portal in professional sport.
+    leagues_empty: >-
+      No leagues were sent by the server. That is a broken install rather than
+      an empty list — every build ships at least the ESPN competitions.
