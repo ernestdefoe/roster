@@ -34,6 +34,17 @@ class EspnRoster
 
     private const BASE = 'https://site.api.espn.com/apis/site/v2/sports';
 
+    /**
+     * How many pages of clubs to walk.
+     *
+     * Two covers college football's seven hundred; the cap is here so a feed
+     * that stops saying "this is the last page" cannot become a loop.
+     */
+    private const MAX_TEAM_PAGES = 4;
+
+    /** @var array<string, array<string, string>> league key => id => division */
+    private array $divisionCache = [];
+
     public function __construct(protected HttpClient $http)
     {
     }
@@ -54,19 +65,56 @@ class EspnRoster
             return [];
         }
 
-        // 🚨 A limit, because the default page is 25 and the NFL has 32. The
-        // symptom without it is a league that is quietly missing its last teams.
-        $body = $this->get($league->espnPath . '/teams', ['limit' => '200']);
+        /*
+         * 🚨 PAGED, and a page is capped however large a limit is asked for.
+         *
+         * College football answers this endpoint with every school ESPN has —
+         * upwards of seven hundred, down to Division III — and a single call
+         * returned the first two hundred alphabetically. Alabama was not among
+         * them. The symptom was a site missing its most famous team while
+         * carrying Adams State, and nothing anywhere said the list had been cut.
+         */
+        $rows = [];
 
-        if ($body === null) {
+        for ($page = 1; $page <= self::MAX_TEAM_PAGES; $page++) {
+            $body = $this->get($league->espnPath . '/teams', ['limit' => '400', 'page' => (string) $page]);
+
+            if ($body === null) {
+                break;
+            }
+
+            $chunk = $body['sports'][0]['leagues'][0]['teams'] ?? [];
+
+            if (!is_array($chunk) || $chunk === []) {
+                break;
+            }
+
+            $rows = array_merge($rows, $chunk);
+
+            // A short page is the last page.
+            if (count($chunk) < 400) {
+                break;
+            }
+        }
+
+        if ($rows === []) {
             return [];
         }
 
-        $rows = $body['sports'][0]['leagues'][0]['teams'] ?? [];
-
-        if (!is_array($rows)) {
-            return [];
-        }
+        /*
+         * 🚨 Scoped to the division the STANDINGS cover, where there are any.
+         *
+         * `/teams` has no notion of division; the standings do, and for college
+         * football `level=3` answers exactly the hundred and thirty-eight FBS
+         * schools. A board about FBS football has no use for six hundred
+         * Division III programmes, and no way to tell them apart without this.
+         *
+         * A league whose standings answer nothing — league football, say — is
+         * unaffected: an empty map means take every club, which is what the
+         * teams endpoint already meant for a competition that has only one
+         * division.
+         */
+        $scope = $this->divisions($league);
 
         $out = [];
 
@@ -74,6 +122,10 @@ class EspnRoster
             $team = is_array($row) ? ($row['team'] ?? null) : null;
 
             if (!is_array($team) || ($team['id'] ?? '') === '') {
+                continue;
+            }
+
+            if ($scope !== [] && !isset($scope[(string) $team['id']])) {
                 continue;
             }
 
@@ -122,10 +174,20 @@ class EspnRoster
             return [];
         }
 
+        /*
+         * Memoised: the club list now asks for this to scope itself, and the
+         * sync asks again to label each club. One standings call per league per
+         * run, not two identical ones.
+         */
+        if (isset($this->divisionCache[$league->key])) {
+            return $this->divisionCache[$league->key];
+        }
+
         // `level=3` is conference → division → team. Levels 1 and 2 stop short.
         $body = $this->get($league->espnPath . '/standings', ['level' => '3'], 'https://site.api.espn.com/apis/v2/sports');
 
         if ($body === null) {
+            // Not cached: a failed call is worth retrying, unlike an empty answer.
             return [];
         }
 
@@ -162,7 +224,7 @@ class EspnRoster
             }
         }
 
-        return $out;
+        return $this->divisionCache[$league->key] = $out;
     }
 
     /**
