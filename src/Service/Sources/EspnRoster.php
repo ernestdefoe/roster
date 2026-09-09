@@ -238,7 +238,19 @@ class EspnRoster
             return [];
         }
 
-        $body = $this->get($league->espnPath . '/teams/' . rawurlencode($teamId) . '/roster', []);
+        /*
+         * 🚨 A limit, because this endpoint silently answers with the first
+         * HUNDRED athletes and says nothing about the rest.
+         *
+         * An FBS roster is around a hundred and thirty, so every club on the
+         * site was quietly missing its last thirty players — a placekicker here,
+         * a walk-on there, and no error anywhere. Alabama returned 100 with
+         * `limit=200` returning 127. 200 clears any roster in the sports this
+         * covers; a league that ever exceeds it would need paging, and would
+         * announce itself the same silent way, so the number is deliberate
+         * rather than merely large.
+         */
+        $body = $this->get($league->espnPath . '/teams/' . rawurlencode($teamId) . '/roster', ['limit' => '200']);
 
         /*
          * 🚨 An empty roster is not an error to shout about. ESPN answers this
