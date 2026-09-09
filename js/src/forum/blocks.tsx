@@ -74,8 +74,16 @@ export default function registerBlocks(): void {
       [
         // Both grounds, one shown by CSS — the wall sits on the page's own
         // background, and a mark drawn for a dark ground vanishes on a light one.
-        m('img.RosterCrests-img.RosterCrests-img--light', { src: team.logo, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
-        m('img.RosterCrests-img.RosterCrests-img--dark', { src: team.logoDark, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
+        /*
+         * 🚨 NOT lazy. The track is twelve thousand pixels wide inside an
+         * overflow-hidden row, and a lazily-loaded image that far outside the
+         * viewport is never fetched — the wall rendered with a hundred and
+         * fifty of five hundred images loaded and the rest as empty squares.
+         * The crests ARE the section; there is nothing here worth deferring,
+         * and the browser dedupes the two copies of each URL anyway.
+         */
+        m('img.RosterCrests-img.RosterCrests-img--light', { src: team.logo, alt: '', referrerpolicy: 'no-referrer' }),
+        m('img.RosterCrests-img.RosterCrests-img--dark', { src: team.logoDark, alt: '', referrerpolicy: 'no-referrer' }),
       ]
     );
   }

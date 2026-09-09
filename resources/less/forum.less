@@ -182,19 +182,23 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 58px;
-  height: 58px;
-  // Grayscale at rest so a hundred and thirty-eight clashing palettes read as
-  // one texture; full colour for the one under the pointer.
-  filter: grayscale(1);
-  opacity: .55;
-  transition: opacity .16s ease, filter .16s ease, transform .16s ease;
+  width: 66px;
+  height: 66px;
+  /*
+   * 🚨 Full colour, and nearly full strength.
+   *
+   * The first version desaturated the whole wall so a hundred and thirty-eight
+   * clashing palettes would read as one texture. It read as grey — and the
+   * colour IS the point: a wall of real crests is the fastest thing on the page
+   * at saying "all of college football". The hover still lifts one out.
+   */
+  opacity: .88;
+  transition: opacity .16s ease, transform .16s ease;
 
   &:hover,
   &:focus-visible {
-    filter: none;
     opacity: 1;
-    transform: scale(1.16);
+    transform: scale(1.22);
   }
 }
 
