@@ -324,9 +324,11 @@ class EspnRoster
              * 🚨 Everything below is nullable on purpose. ESPN omits a jersey
              * for an unsigned player, a height for most of soccer, and an age
              * for anybody whose birthday it does not hold — and a zero stored
-             * for a missing number is a page that says a player is 0in tall.
+             * for a missing measurement is a page that says a player is 0in
+             * tall. The JERSEY is the exception and has its own guard: see
+             * jersey(), where 0 is a number somebody actually wears.
              */
-            'jersey' => $this->number($athlete['jersey'] ?? null),
+            'jersey' => $this->jersey($athlete['jersey'] ?? null),
             'height' => $this->number($athlete['height'] ?? null),
             'weight' => $this->number($athlete['weight'] ?? null),
             'home_city' => (string) ($birthPlace['city'] ?? ''),
@@ -367,6 +369,31 @@ class EspnRoster
         return $years >= 1 && $years <= 5 ? $years : null;
     }
 
+    /**
+     * A shirt number, where ZERO is a real one.
+     *
+     * 🚨 Split from number() because the two mean opposite things by zero. A
+     * height of 0 is a missing height; a jersey of 0 is a jersey — legal in
+     * college football and increasingly common, and Alabama has worn it. Run
+     * through the measurement guard, every player wearing 0 showed up with no
+     * number at all, on this port and on the Convoro one before it.
+     *
+     * Negative is still nothing: it is not a number anybody wears.
+     */
+    private function jersey(mixed $value): ?int
+    {
+        if ($value === null || $value === '' || !is_numeric($value)) {
+            return null;
+        }
+
+        $number = (int) round((float) $value);
+
+        return $number >= 0 ? $number : null;
+    }
+
+    /**
+     * A measurement, where zero means the feed did not have one.
+     */
     private function number(mixed $value): ?int
     {
         if ($value === null || $value === '' || !is_numeric($value)) {
