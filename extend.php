@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Roster;
 
+use ErnestDefoe\Roster\Frontend\RosterPageContent;
 use ErnestDefoe\Roster\Api\Controller\TeamController;
 use ErnestDefoe\Roster\Api\Controller\TeamsController;
 use ErnestDefoe\Roster\Console\SyncCommand;
@@ -19,8 +20,8 @@ $extenders = [
     (new Extend\Frontend('forum'))
         ->js(__DIR__ . '/js/dist/forum.js')
         ->css(__DIR__ . '/resources/less/forum.less')
-        ->route('/roster', 'roster.index')
-        ->route('/roster/{slug}', 'roster.team'),
+        ->route('/roster', 'roster.index', RosterPageContent::class)
+        ->route('/roster/{slug}', 'roster.team', RosterPageContent::class),
 
     (new Extend\Frontend('admin'))
         ->js(__DIR__ . '/js/dist/admin.js')
@@ -70,5 +71,21 @@ if (class_exists(\Ernestdefoe\PageBuilder\Extend\PageBuilderBlock::class)) {
     );
 }
 
+/*
+ * Every team's roster page offered to search engines — 136 real pages that were
+ * previously reachable only by somebody who already knew they were there.
+ *
+ * 🚨 Guarded on the EXTENDER's class, and the resource is named only inside the
+ * branch, for the same reason as the block above: this file is read at boot,
+ * and FoF\Sitemap\Resources\Resource is the PARENT of the class below. Naming
+ * it on a site without fof/sitemap is a fatal at load time rather than a
+ * missing sitemap entry.
+ */
+if (class_exists(\FoF\Sitemap\Extend\Sitemap::class)) {
+    $extenders[] = (new \FoF\Sitemap\Extend\Sitemap())
+        ->addResource(\ErnestDefoe\Roster\Sitemap\TeamPages::class);
+}
+
 return $extenders;
+
 
