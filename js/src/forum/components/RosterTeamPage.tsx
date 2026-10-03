@@ -2,6 +2,7 @@ import app from 'flarum/forum/app';
 import Page from 'flarum/common/components/Page';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Link from 'flarum/common/components/Link';
+import { hasWaymark, trail, teamsCrumb } from '../waymark';
 
 declare const m: any;
 
@@ -35,6 +36,7 @@ export default class RosterTeamPage extends Page {
         this.groups = data.groups || [];
         this.collegiate = !!data.collegiate;
         this.loading = false;
+        app.setTitle(this.team?.name || '');
         app.history.push('roster', this.team?.name || '');
         m.redraw();
       })
@@ -50,10 +52,13 @@ export default class RosterTeamPage extends Page {
 
     return (
       <div className="RosterPage RosterPage--team">
+        {trail([teamsCrumb(), { label: this.team.name }])}
         <div className="container">
-          <Link className="RosterTeam-back" href={app.route('roster.index')}>
-            {app.translator.trans('ernestdefoe-roster.forum.title')}
-          </Link>
+          {hasWaymark() ? null : (
+            <Link className="RosterTeam-back" href={app.route('roster.index')}>
+              {app.translator.trans('ernestdefoe-roster.forum.title')}
+            </Link>
+          )}
 
           <header className="RosterTeam-head">
             {this.team.logo ? <img className="RosterTeam-crest" src={this.team.logo} alt="" /> : null}
@@ -99,7 +104,9 @@ export default class RosterTeamPage extends Page {
                             empty cell for a jersey the player genuinely has.
                           */}
                           <td className="RosterTable-num">{p.jersey !== null && p.jersey !== undefined ? p.jersey : ''}</td>
-                          <td className="RosterTable-name">{p.name}</td>
+                          <td className="RosterTable-name">
+                            <Link href={app.route('roster.player', { slug: m.route.param('slug'), player: p.slug })}>{p.name}</Link>
+                          </td>
                           <td>{p.position}</td>
                           {this.collegiate && <td>{this.classYear(p.classYear)}</td>}
                           <td>{p.height || ''}</td>

@@ -6,6 +6,7 @@ import LinkButton from 'flarum/common/components/LinkButton';
 import registerBlocks from './blocks';
 import RosterIndexPage from './components/RosterIndexPage';
 import RosterTeamPage from './components/RosterTeamPage';
+import RosterPlayerPage from './components/RosterPlayerPage';
 
 app.initializers.add('ernestdefoe-roster', () => {
   // The crest wall, offered to Page Builder. Registration only.
@@ -13,6 +14,7 @@ app.initializers.add('ernestdefoe-roster', () => {
 
   app.routes['roster.index'] = { path: '/roster', component: RosterIndexPage };
   app.routes['roster.team'] = { path: '/roster/:slug', component: RosterTeamPage };
+  app.routes['roster.player'] = { path: '/roster/:slug/:player', component: RosterPlayerPage };
 
   /*
    * A place to click, in the nav every other page uses.

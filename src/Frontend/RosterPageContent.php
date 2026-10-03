@@ -51,6 +51,18 @@ class RosterPageContent
             return;
         }
 
+        // A player's own page: his name, then his club.
+        $playerSlug = (string) ($request->getQueryParams()['player'] ?? '');
+        if ($playerSlug !== '') {
+            $player = \ErnestDefoe\Roster\Player::query()->where('slug', $playerSlug)->where('team_id', $team->id)->first();
+
+            if ($player !== null) {
+                $document->title = trim((string) $player->name) . ' — ' . trim((string) $team->name);
+
+                return;
+            }
+        }
+
         $name = trim((string) $team->name);
         $document->title = $name . ' roster';
 

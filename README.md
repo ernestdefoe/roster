@@ -28,6 +28,20 @@ php flarum cache:clear
 
 `roster:sync` runs hourly on Flarum's scheduler and needs nothing else.
 
+## Player pages
+
+Every name on a roster is a link to that player's own page:
+
+- **His bio:** photo, number, position, height, weight, class, hometown, and his next game
+- **About:** a summary from Wikipedia, but only when the article is certainly about him. The title must be his name, and the summary must mention his school and football, so a player who shares a name with someone famous never gets the wrong man's story.
+- **Highlights:** ESPN's clips about him, played on the page in ESPN's own embeddable player
+- **Career stats** by season and his **recent games**
+- **News:** ESPN's stories that actually name him
+
+Every section only appears when there's something in it. ESPN pads a quiet player's news with whatever college football is talking about that day, so stories that never name him are left out; a walk-on gets his bio and nothing invented.
+
+What ESPN and Wikipedia return is cached for six hours per player (a week for Wikipedia), so a busy roster doesn't turn into a stream of outside requests. With [Waymark](https://github.com/ernestdefoe/waymark) installed, the roster pages carry its breadcrumb trail: Home › Roster › Texas › Arch Manning.
+
 ## Things worth knowing
 
 🚨 **The position groups are the provider's own.** Offence, defence and

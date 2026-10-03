@@ -1,7 +1,7 @@
 import app from 'flarum/forum/app';
+import { trail, teamsCrumb } from '../waymark';
 import Page from 'flarum/common/components/Page';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
-import IndexPage from 'flarum/forum/components/IndexPage';
 import Link from 'flarum/common/components/Link';
 
 declare const m: any;
@@ -48,7 +48,7 @@ export default class RosterIndexPage extends Page {
   view() {
     return (
       <div className="RosterPage">
-        {IndexPage.prototype.hero ? null : null}
+        {trail([teamsCrumb(false)])}
         <div className="container">
           <div className="RosterPage-head">
             <h1>{app.translator.trans('ernestdefoe-roster.forum.title')}</h1>

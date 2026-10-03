@@ -275,3 +275,353 @@ html[data-theme='dark'] .RosterCrests {
   .RosterCrests-crest { width: 44px; height: 44px; }
   .RosterCrests-track { gap: 22px; padding-right: 22px; }
 }
+
+// ── A player's page ─────────────────────────────────────────────────────────
+// The club's colour carries the hero (`--roster-team`, from the team row); a
+// club with none falls back to the theme's primary colour.
+
+.RosterTable-name a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: none;
+
+  &:hover,
+  &:focus {
+    color: var(--primary-color);
+    text-decoration: underline;
+  }
+}
+
+.RosterPlayer-hero {
+  margin-top: 10px;
+  padding: 26px 0;
+  color: #fff;
+  background: var(--roster-team, var(--primary-color));
+  // A darker band under the text so a pale club colour still carries white.
+  background-image: linear-gradient(90deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.05));
+}
+
+.RosterPlayer-heroInner {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.RosterPlayer-photo {
+  flex: 0 0 auto;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+  }
+}
+
+.RosterPlayer-initials {
+  align-self: center;
+  font-size: 2.6rem;
+  font-weight: 800;
+  color: #555;
+}
+
+.RosterPlayer-identity {
+  min-width: 0;
+
+  h1 {
+    margin: 4px 0 2px;
+    font-size: 2rem;
+    line-height: 1.15;
+    color: #fff;
+  }
+}
+
+// 🚨 Four classes and an element. Bespoke colours every light-mode link with
+// `:root:not([data-theme^="dark"]) a:not(.Button)` — three classes and an
+// element, and later in the sheet — which painted the club's name in brand red
+// on the club's own colour. Three classes tied and lost; four wins in any order
+// without reaching for !important.
+.RosterPage .RosterPlayer-hero .RosterPlayer-identity a.RosterPlayer-team,
+.RosterPage .RosterPlayer-hero .RosterPlayer-identity a.RosterPlayer-team:hover,
+.RosterPage .RosterPlayer-hero .RosterPlayer-identity a.RosterPlayer-team:focus {
+  color: #fff;
+}
+
+.RosterPlayer-team {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 600;
+  text-decoration: none;
+
+  img {
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
+    background: #fff;
+    border-radius: 50%;
+    padding: 2px;
+  }
+
+  &:hover,
+  &:focus {
+    color: #fff;
+    text-decoration: underline;
+  }
+}
+
+.RosterPlayer-line {
+  margin: 0;
+  font-size: 1.05rem;
+  opacity: 0.9;
+}
+
+.RosterPlayer-body {
+  padding-top: 20px;
+  padding-bottom: 40px;
+}
+
+.RosterPlayer-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 0 0 18px;
+
+  dt {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted-color);
+  }
+
+  dd {
+    margin: 2px 0 0;
+    font-weight: 600;
+  }
+}
+
+
+.RosterPlayer-next {
+  margin: 0 0 20px;
+}
+
+.RosterPlayer-section {
+  margin: 28px 0 0;
+
+  h2 {
+    margin: 0 0 12px;
+    font-size: 1.25rem;
+  }
+}
+
+.RosterPlayer-about p {
+  max-width: 75ch;
+  line-height: 1.6;
+}
+
+.RosterPlayer-credit,
+.RosterPlayer-source {
+  font-size: 0.85rem;
+}
+
+.RosterPlayer-videos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.RosterVideo {
+  margin: 0;
+
+  figcaption {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 6px;
+    font-size: 0.9rem;
+  }
+}
+
+.RosterVideo-poster,
+.RosterVideo-frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+}
+
+.RosterVideo-poster {
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.2s ease;
+  }
+
+  &:hover img,
+  &:focus-visible img {
+    transform: scale(1.03);
+  }
+}
+
+.RosterVideo-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 54px;
+  height: 54px;
+  margin: -27px 0 0 -27px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 20px;
+  line-height: 54px;
+  text-align: center;
+  padding-left: 4px;
+}
+
+.RosterVideo-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.RosterVideo-title {
+  font-weight: 600;
+}
+
+.RosterVideo-link {
+  font-size: 0.8rem;
+}
+
+.RosterTable--stats {
+  th[scope="row"] {
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  td {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  abbr {
+    text-decoration: none;
+    cursor: help;
+  }
+}
+
+.RosterGame {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  img {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+  }
+}
+
+.RosterGame-result {
+  margin-left: 4px;
+  font-weight: 600;
+  color: var(--muted-color);
+
+  &--w {
+    color: #1f8a3e;
+  }
+
+  &--l {
+    color: #c0392b;
+  }
+}
+
+.RosterPlayer-news {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+
+  a {
+    display: flex;
+    gap: 12px;
+    color: inherit;
+    text-decoration: none;
+
+    &:hover strong,
+    &:focus strong {
+      text-decoration: underline;
+    }
+  }
+
+  img {
+    flex: 0 0 120px;
+    width: 120px;
+    height: 68px;
+    object-fit: cover;
+    border-radius: 6px;
+  }
+
+  span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  small {
+    color: var(--muted-color);
+  }
+}
+
+.RosterPlayer-newsText {
+  color: var(--muted-color);
+  font-size: 0.9rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+// 767.98px, not 767px: Flarum's own phone layout switches at the fraction.
+@media (max-width: 767.98px) {
+  .RosterPlayer-heroInner {
+    gap: 14px;
+  }
+
+  .RosterPlayer-photo {
+    width: 86px;
+    height: 86px;
+  }
+
+  .RosterPlayer-identity h1 {
+    font-size: 1.5rem;
+  }
+
+  .RosterPlayer-news img {
+    flex-basis: 88px;
+    width: 88px;
+    height: 50px;
+  }
+}

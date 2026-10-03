@@ -3,6 +3,7 @@
 namespace ErnestDefoe\Roster;
 
 use ErnestDefoe\Roster\Frontend\RosterPageContent;
+use ErnestDefoe\Roster\Api\Controller\PlayerController;
 use ErnestDefoe\Roster\Api\Controller\TeamController;
 use ErnestDefoe\Roster\Api\Controller\TeamsController;
 use ErnestDefoe\Roster\Console\SyncCommand;
@@ -21,7 +22,8 @@ $extenders = [
         ->js(__DIR__ . '/js/dist/forum.js')
         ->css(__DIR__ . '/resources/less/forum.less')
         ->route('/roster', 'roster.index', RosterPageContent::class)
-        ->route('/roster/{slug}', 'roster.team', RosterPageContent::class),
+        ->route('/roster/{slug}', 'roster.team', RosterPageContent::class)
+        ->route('/roster/{slug}/{player}', 'roster.player', RosterPageContent::class),
 
     (new Extend\Frontend('admin'))
         ->js(__DIR__ . '/js/dist/admin.js')
@@ -38,7 +40,8 @@ $extenders = [
 
     (new Extend\Routes('api'))
         ->get('/roster/teams', 'roster.api.teams', TeamsController::class)
-        ->get('/roster/team', 'roster.api.team', TeamController::class),
+        ->get('/roster/team', 'roster.api.team', TeamController::class)
+        ->get('/roster/player', 'roster.api.player', PlayerController::class),
 
     (new Extend\Settings())
         /*

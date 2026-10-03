@@ -22,6 +22,27 @@ ernestdefoe-roster:
       specialists: Specialists
       other: Other
 
+    player_page:
+      not_found: There is no player at this address.
+      height: Height
+      weight: Weight
+      class: Class
+      hometown: Hometown
+      age: Age
+      status: Status
+      next_game: "Next game:"
+      time_tba: time TBA
+      about: About
+      wikipedia: Read more on Wikipedia
+      highlights: Highlights
+      play: "Play: {title}"
+      watch_on_espn: Watch on ESPN
+      career: Career stats
+      recent_games: Recent games
+      news: News
+      espn_profile: Full profile on ESPN
+      nothing_yet: Nothing has been written about this player yet. His stats, clips and news appear here as they're published.
+
     class_year:
       freshman: Freshman
       sophomore: Sophomore
