@@ -625,3 +625,22 @@ html[data-theme='dark'] .RosterCrests {
     height: 50px;
   }
 }
+
+// A club whose colour is pale (a white or silver primary) gets dark text, and
+// no darkening band, which would only muddy it.
+.RosterPage--lightClub {
+  .RosterPlayer-hero {
+    color: #111;
+    background-image: none;
+  }
+
+  .RosterPlayer-identity h1 {
+    color: #111;
+  }
+
+  .RosterPlayer-hero .RosterPlayer-identity a.RosterPlayer-team,
+  .RosterPlayer-hero .RosterPlayer-identity a.RosterPlayer-team:hover,
+  .RosterPlayer-hero .RosterPlayer-identity a.RosterPlayer-team:focus {
+    color: #111;
+  }
+}

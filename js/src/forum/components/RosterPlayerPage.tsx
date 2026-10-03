@@ -73,7 +73,10 @@ export default class RosterPlayerPage extends Page {
     const teamHref = app.route('roster.team', { slug: team.slug });
 
     return (
-      <div className="RosterPage RosterPage--player" style={team.color ? { '--roster-team': team.color } : undefined}>
+      <div
+        className={'RosterPage RosterPage--player' + (isLight(clubColor(team.color)) ? ' RosterPage--lightClub' : '')}
+        style={clubColor(team.color) ? { '--roster-team': clubColor(team.color) } : undefined}
+      >
         {hasWaymark() ? (
           trail([teamsCrumb(), { label: team.name, href: teamHref }, { label: player.name }])
         ) : (
@@ -282,6 +285,31 @@ function fact(label: any, value: any) {
       <dd>{value}</dd>
     </div>
   );
+}
+
+/**
+ * The club's colour as CSS can use it.
+ *
+ * 🚨 ESPN gives colours as bare hex — `ba0c2f` — and that is how fbsfb stores
+ * them. Without the `#` it is not a colour at all: the custom property is
+ * invalid where it is used, the background falls back to nothing, and Ohio
+ * State's scarlet banner rendered as pale grey under white text.
+ */
+function clubColor(color: string | null | undefined): string | null {
+  const c = String(color || '').trim();
+  if (/^[0-9a-f]{6}$/i.test(c) || /^[0-9a-f]{3}$/i.test(c)) return '#' + c;
+  return c || null;
+}
+
+/** Whether white text would be hard to read on this colour. */
+function isLight(color: string | null): boolean {
+  const m6 = /^#([0-9a-f]{6})$/i.exec(color || '');
+  if (!m6) return false;
+  const [r, g, b] = [0, 2, 4].map((i) => {
+    const v = parseInt(m6[1].slice(i, i + 2), 16) / 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.45;
 }
 
 function initials(name: string) {
