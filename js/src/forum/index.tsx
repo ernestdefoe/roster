@@ -4,17 +4,15 @@ import IndexSidebar from 'flarum/forum/components/IndexSidebar';
 import LinkButton from 'flarum/common/components/LinkButton';
 
 import registerBlocks from './blocks';
-import RosterIndexPage from './components/RosterIndexPage';
-import RosterTeamPage from './components/RosterTeamPage';
-import RosterPlayerPage from './components/RosterPlayerPage';
 
 app.initializers.add('ernestdefoe-roster', () => {
   // The crest wall, offered to Page Builder. Registration only.
   registerBlocks();
 
-  app.routes['roster.index'] = { path: '/roster', component: RosterIndexPage };
-  app.routes['roster.team'] = { path: '/roster/:slug', component: RosterTeamPage };
-  app.routes['roster.player'] = { path: '/roster/:slug/:player', component: RosterPlayerPage };
+  // Code-split: each page loads when someone opens it, not with every page.
+  app.routes['roster.index'] = { path: '/roster', component: () => import('./components/RosterIndexPage') };
+  app.routes['roster.team'] = { path: '/roster/:slug', component: () => import('./components/RosterTeamPage') };
+  app.routes['roster.player'] = { path: '/roster/:slug/:player', component: () => import('./components/RosterPlayerPage') };
 
   /*
    * A place to click, in the nav every other page uses.

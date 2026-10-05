@@ -20,6 +20,8 @@ $extenders = [
      */
     (new Extend\Frontend('forum'))
         ->js(__DIR__ . '/js/dist/forum.js')
+        // The roster pages are their own chunks, loaded only when opened.
+        ->jsDirectory(__DIR__ . '/js/dist/forum')
         ->css(__DIR__ . '/resources/less/forum.less')
         ->route('/roster', 'roster.index', RosterPageContent::class)
         ->route('/roster/{slug}', 'roster.team', RosterPageContent::class)

@@ -108,12 +108,9 @@ export default function registerBlocks(): void {
     });
   }
 
-  /** Which ground the stylesheet will show — the same two rules it uses. */
+  /** Which ground the stylesheet will show — the same rule it uses. */
   function darkGround(): boolean {
-    const theme = document.documentElement.getAttribute('data-theme');
-    if (theme === 'dark') return true;
-    if (theme === 'light') return false;
-    return !!window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return (document.documentElement.getAttribute('data-theme') || '').startsWith('dark');
   }
 
   const registry = (app as any).pageBuilder;

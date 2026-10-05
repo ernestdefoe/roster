@@ -211,16 +211,11 @@
 // One ground at a time; see the component for why both travel.
 .RosterCrests-img--dark { display: none; }
 
-html[data-theme='dark'] .RosterCrests {
+// `^=` and no `prefers-color-scheme` branch: core resolves "auto" to light or
+// dark in <head> before this stylesheet loads, so <html> always says which.
+html[data-theme^='dark'] .RosterCrests {
   .RosterCrests-img--light { display: none; }
   .RosterCrests-img--dark { display: block; }
-}
-
-@media (prefers-color-scheme: dark) {
-  html:not([data-theme='light']) .RosterCrests {
-    .RosterCrests-img--light { display: none; }
-    .RosterCrests-img--dark { display: block; }
-  }
 }
 
 .RosterCrests-caption {
