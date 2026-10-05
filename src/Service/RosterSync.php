@@ -90,11 +90,12 @@ class RosterSync
         $divisions = $this->espn->divisions($league);
         $written = 0;
 
+        // One query for the league's clubs rather than one per club: this runs
+        // every hour for every league the site follows.
+        $known = $this->known(Team::class, $league, array_column($clubs, 'external_id'));
+
         foreach ($clubs as $club) {
-            $existing = Team::query()
-                ->where('league', $league->key)
-                ->where('external_id', $club['external_id'])
-                ->first();
+            $existing = $known[(string) $club['external_id']] ?? null;
 
             $values = [
                 'name' => Str::limit((string) $club['school'], 189, ''),
@@ -114,7 +115,7 @@ class RosterSync
                 continue;
             }
 
-            Team::query()->create($values + [
+            $known[(string) $club['external_id']] = Team::query()->create($values + [
                 'league' => $league->key,
                 'external_id' => $club['external_id'],
                 /*
@@ -193,6 +194,10 @@ class RosterSync
     {
         $written = 0;
 
+        // 🚨 One query for the whole roster. Looked up player by player, a
+        // run of twelve clubs was well over a thousand SELECTs every hour.
+        $known = $this->known(Player::class, $league, array_column($roster, 'external_id'));
+
         foreach ($roster as $row) {
             $values = [
                 'team_id' => $team->id,
@@ -211,10 +216,7 @@ class RosterSync
                 'photo_url' => (string) $row['headshot'],
             ];
 
-            $existing = Player::query()
-                ->where('league', $league->key)
-                ->where('external_id', $row['external_id'])
-                ->first();
+            $existing = $known[(string) $row['external_id']] ?? null;
 
             if ($existing !== null) {
                 $existing->fill($values)->save();
@@ -223,7 +225,7 @@ class RosterSync
                 continue;
             }
 
-            Player::query()->create($values + [
+            $known[(string) $row['external_id']] = Player::query()->create($values + [
                 'league' => $league->key,
                 'external_id' => $row['external_id'],
                 'slug' => $this->slug($league, (string) $row['name']) . '-' . $row['external_id'],
@@ -233,6 +235,27 @@ class RosterSync
         }
 
         return $written;
+    }
+
+    /**
+     * The rows already held for these external ids, keyed by the id as a string.
+     *
+     * @param class-string<Team|Player> $model
+     * @param list<mixed> $ids
+     * @return array<string, Team|Player>
+     */
+    protected function known(string $model, League $league, array $ids): array
+    {
+        $ids = array_values(array_unique(array_map('strval', array_filter($ids, fn ($id) => $id !== null && $id !== ''))));
+        $out = [];
+
+        foreach (array_chunk($ids, 500) as $chunk) {
+            foreach ($model::query()->where('league', $league->key)->whereIn('external_id', $chunk)->get() as $row) {
+                $out[(string) $row->external_id] = $row;
+            }
+        }
+
+        return $out;
     }
 
     /* --------------------------------------------------------------- naming */
