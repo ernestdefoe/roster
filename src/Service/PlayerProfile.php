@@ -31,6 +31,8 @@ class PlayerProfile
     private const TTL = 6 * 3600;
     private const TTL_FAILED = 15 * 60;
     private const WIKI_TTL = 7 * 86400;
+    /** How long a profile stays servable after it goes stale (see $mayFetch). */
+    private const STALE_TTL = 14 * 86400;
 
     public function __construct(
         protected HttpClient $http,
@@ -38,14 +40,38 @@ class PlayerProfile
     ) {
     }
 
-    /** @return array<string, mixed> */
-    public function for(Player $player, Team $team): array
+    /**
+     * True when this player's page can be answered from the cache alone, so
+     * building it costs no outbound request.
+     */
+    public function isCached(Player $player): bool
+    {
+        $league = (new Leagues())->get($player->league);
+
+        if ($league->provider === 'espn' && $league->espnPath !== '' && $player->external_id
+            && ! is_array($this->cache->get($this->espnKey($league->espnPath, (string) $player->external_id)))) {
+            return false;
+        }
+
+        return $this->cache->has('ernestdefoe-roster.profile.wiki.' . $player->id);
+    }
+
+    /**
+     * 🚨 $mayFetch = false answers from the cache only: the fresh copy, else
+     * the last good one (kept two weeks), else nothing. That is what a page
+     * gets while the uncached-build budget is spent, so a crawl walking every
+     * player cannot hold PHP workers on ESPN and Wikipedia; a page shown in
+     * that window simply has fewer sections until the next visit.
+     *
+     * @return array<string, mixed>
+     */
+    public function for(Player $player, Team $team, bool $mayFetch): array
     {
         $league = (new Leagues())->get($player->league);
 
         $espn = [];
         if ($league->provider === 'espn' && $league->espnPath !== '' && $player->external_id) {
-            $espn = $this->espn($league->espnPath, (string) $player->external_id);
+            $espn = $this->espn($league->espnPath, (string) $player->external_id, $mayFetch);
         }
 
         foreach (['videos', 'news'] as $list) {
@@ -55,7 +81,7 @@ class PlayerProfile
         }
 
         return $espn + [
-            'about' => $this->wikipedia((string) $player->name, $team, (string) $player->id),
+            'about' => $this->wikipedia((string) $player->name, $team, (string) $player->id, $mayFetch),
         ];
     }
 
@@ -89,13 +115,24 @@ class PlayerProfile
     }
 
     /** @return array<string, mixed> */
-    private function espn(string $path, string $id): array
+    private function espnKey(string $path, string $id): string
     {
-        $key = 'ernestdefoe-roster.profile.espn.' . md5($path . '|' . $id);
+        return 'ernestdefoe-roster.profile.espn.' . md5($path . '|' . $id);
+    }
+
+    private function espn(string $path, string $id, bool $mayFetch): array
+    {
+        $key = $this->espnKey($path, $id);
 
         $cached = $this->cache->get($key);
         if (is_array($cached)) {
             return $cached;
+        }
+
+        if (! $mayFetch) {
+            $stale = $this->cache->get($key . '.stale');
+
+            return is_array($stale) ? $stale : [];
         }
 
         $base = self::ESPN . '/' . $path . '/athletes/' . rawurlencode($id);
@@ -120,6 +157,7 @@ class PlayerProfile
         ];
 
         $this->cache->put($key, $out, self::TTL);
+        $this->cache->put($key . '.stale', $out, self::STALE_TTL);
 
         return $out;
     }
@@ -128,7 +166,7 @@ class PlayerProfile
     private function bio(array $a): array
     {
         return array_filter([
-            'headshot' => $a['headshot']['href'] ?? null,
+            'headshot' => self::web($a['headshot']['href'] ?? null),
             'jersey' => $a['displayJersey'] ?? null,
             'position' => $a['position']['displayName'] ?? null,
             'height' => $a['displayHeight'] ?? null,
@@ -191,7 +229,7 @@ class PlayerProfile
                 'date' => $event['gameDate'] ?? null,
                 'atVs' => $event['atVs'] ?? '',
                 'opponent' => $event['opponent']['abbreviation'] ?? ($event['opponent']['displayName'] ?? ''),
-                'opponentLogo' => $event['opponent']['logo'] ?? null,
+                'opponentLogo' => self::web($event['opponent']['logo'] ?? null),
                 'result' => $event['gameResult'] ?? '',
                 'score' => $event['score'] ?? '',
                 'values' => array_values($line['stats'] ?? []),
@@ -250,9 +288,9 @@ class PlayerProfile
                 'id' => $m[1],
                 'title' => (string) ($item['headline'] ?? ''),
                 'description' => (string) ($item['description'] ?? ''),
-                'image' => $item['images'][0]['url'] ?? null,
+                'image' => self::web($item['images'][0]['url'] ?? null),
                 'published' => $item['published'] ?? ($item['lastModified'] ?? null),
-                'url' => $web ?: null,
+                'url' => self::web($web),
             ];
 
             if (count($out) >= 8) {
@@ -273,7 +311,7 @@ class PlayerProfile
                 continue;
             }
 
-            $url = $item['links']['web']['href'] ?? null;
+            $url = self::web($item['links']['web']['href'] ?? null);
             if (!$url || empty($item['headline'])) {
                 continue;
             }
@@ -281,7 +319,7 @@ class PlayerProfile
             $out[] = [
                 'title' => (string) $item['headline'],
                 'description' => (string) ($item['description'] ?? ''),
-                'image' => $item['images'][0]['url'] ?? null,
+                'image' => self::web($item['images'][0]['url'] ?? null),
                 'published' => $item['published'] ?? ($item['lastModified'] ?? null),
                 'url' => $url,
             ];
@@ -298,11 +336,11 @@ class PlayerProfile
     {
         foreach ($links as $link) {
             if (in_array('playercard', $link['rel'] ?? [], true) && !empty($link['href'])) {
-                return (string) $link['href'];
+                return self::web($link['href']);
             }
         }
 
-        return $links[0]['href'] ?? null;
+        return self::web($links[0]['href'] ?? null);
     }
 
     /**
@@ -317,7 +355,7 @@ class PlayerProfile
      *
      * @return array<string, mixed>|null
      */
-    private function wikipedia(string $name, Team $team, string $playerId): ?array
+    private function wikipedia(string $name, Team $team, string $playerId, bool $mayFetch): ?array
     {
         $key = 'ernestdefoe-roster.profile.wiki.' . $playerId;
 
@@ -325,6 +363,10 @@ class PlayerProfile
             $hit = $this->cache->get($key);
 
             return is_array($hit) ? $hit : null;
+        }
+
+        if (! $mayFetch) {
+            return null;
         }
 
         $result = $this->findWikipedia($name, $team);
@@ -374,12 +416,22 @@ class PlayerProfile
             return [
                 'title' => $title,
                 'extract' => $extract,
-                'url' => $summary['content_urls']['desktop']['page'] ?? (self::WIKI . '/wiki/' . rawurlencode(str_replace(' ', '_', $title))),
-                'image' => $summary['thumbnail']['source'] ?? null,
+                'url' => self::web($summary['content_urls']['desktop']['page'] ?? null) ?? (self::WIKI . '/wiki/' . rawurlencode(str_replace(' ', '_', $title))),
+                'image' => self::web($summary['thumbnail']['source'] ?? null),
             ];
         }
 
         return null;
+    }
+
+    /**
+     * A link or image from a feed, only if it is plain http(s). These land in
+     * href and src on the player page, so a feed that ever carried a
+     * javascript: or data: address must not pass it through.
+     */
+    private static function web($url): ?string
+    {
+        return is_string($url) && preg_match('#^https?://[^\s"\'<>]+$#i', $url) ? $url : null;
     }
 
     /**
