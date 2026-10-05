@@ -4,6 +4,7 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Link from 'flarum/common/components/Link';
 import humanTime from 'flarum/common/helpers/humanTime';
 import { hasWaymark, trail, teamsCrumb } from '../waymark';
+import crestUrl from '../crest';
 
 declare const m: any;
 
@@ -93,7 +94,7 @@ export default class RosterPlayerPage extends Page {
 
             <div className="RosterPlayer-identity">
               <Link className="RosterPlayer-team" href={teamHref}>
-                {team.logo ? <img src={team.logo} alt="" /> : null}
+                {team.logo ? <img src={crestUrl(team.logo, 26)} alt="" /> : null}
                 {team.name}
               </Link>
               <h1>{player.name}</h1>
@@ -211,7 +212,7 @@ export default class RosterPlayerPage extends Page {
   recentGames(games: any) {
     const rows = games.rows.map((g: any) => [
       <span className="RosterGame">
-        {g.opponentLogo ? <img src={g.opponentLogo} alt="" /> : null}
+        {g.opponentLogo ? <img src={crestUrl(g.opponentLogo, 20)} alt="" loading="lazy" decoding="async" /> : null}
         {g.atVs} {g.opponent}
         <small className={'RosterGame-result RosterGame-result--' + String(g.result).toLowerCase()}>
           {g.result} {g.score}

@@ -3,6 +3,7 @@ import Page from 'flarum/common/components/Page';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Link from 'flarum/common/components/Link';
 import { hasWaymark, trail, teamsCrumb } from '../waymark';
+import crestUrl from '../crest';
 
 declare const m: any;
 
@@ -61,7 +62,7 @@ export default class RosterTeamPage extends Page {
           )}
 
           <header className="RosterTeam-head">
-            {this.team.logo ? <img className="RosterTeam-crest" src={this.team.logo} alt="" /> : null}
+            {this.team.logo ? <img className="RosterTeam-crest" src={crestUrl(this.team.logo, 64)} alt="" /> : null}
             <div>
               <h1>
                 {this.team.name} {this.team.mascot ? <small>{this.team.mascot}</small> : null}

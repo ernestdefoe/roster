@@ -3,6 +3,7 @@ import { trail, teamsCrumb } from '../waymark';
 import Page from 'flarum/common/components/Page';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Link from 'flarum/common/components/Link';
+import crestUrl from '../crest';
 
 declare const m: any;
 
@@ -98,7 +99,7 @@ export default class RosterIndexPage extends Page {
                 <div className="RosterGrid">
                   {group.teams.map((team: any) => (
                     <Link className="RosterCard" href={app.route('roster.team', { slug: team.slug })}>
-                      {team.logo ? <img className="RosterCard-crest" src={team.logo} alt="" loading="lazy" /> : <span className="RosterCard-crest RosterCard-crest--none" />}
+                      {team.logo ? <img className="RosterCard-crest" src={crestUrl(team.logo, 34)} alt="" loading="lazy" decoding="async" /> : <span className="RosterCard-crest RosterCard-crest--none" />}
                       <span className="RosterCard-name">
                         {team.name}
                         {team.mascot ? <span className="RosterCard-mascot">{team.mascot}</span> : null}

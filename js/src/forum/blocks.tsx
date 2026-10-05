@@ -1,4 +1,5 @@
 import app from 'flarum/forum/app';
+import crestUrl from './crest';
 
 declare const m: any;
 
@@ -22,6 +23,7 @@ export default function registerBlocks(): void {
       const rows = Math.max(1, Math.min(parseInt(settings.rows, 10) || 2, 3));
       const per = Math.ceil(teams.length / rows);
       const counts = data.counts;
+      const dark = darkGround();
 
       return m('.RosterCrests', [
         m('.RosterCrests-wall', Array.from({ length: rows }, (_, i) => {
@@ -38,8 +40,8 @@ export default function registerBlocks(): void {
            */
           return m('.RosterCrests-row', { key: i, className: i % 2 ? 'RosterCrests-row--reverse' : '' }, [
             m('.RosterCrests-track', [
-              slice.map((t: any) => crest(t, false)),
-              slice.map((t: any) => crest(t, true)),
+              slice.map((t: any) => crest(t, false, dark)),
+              slice.map((t: any) => crest(t, true, dark)),
             ]),
           ]);
         })),
@@ -62,7 +64,7 @@ export default function registerBlocks(): void {
     },
   };
 
-  function crest(team: any, duplicate: boolean) {
+  function crest(team: any, duplicate: boolean, dark: boolean) {
     return m(
       'a.RosterCrests-crest',
       {
@@ -75,17 +77,43 @@ export default function registerBlocks(): void {
         // Both grounds, one shown by CSS — the wall sits on the page's own
         // background, and a mark drawn for a dark ground vanishes on a light one.
         /*
-         * 🚨 NOT lazy. The track is twelve thousand pixels wide inside an
-         * overflow-hidden row, and a lazily-loaded image that far outside the
-         * viewport is never fetched — the wall rendered with a hundred and
-         * fifty of five hundred images loaded and the rest as empty squares.
-         * The crests ARE the section; there is nothing here worth deferring,
-         * and the browser dedupes the two copies of each URL anyway.
+         * 🚨 The crest on show is NOT lazy. The track is twelve thousand pixels
+         * wide inside an overflow-hidden row and moves by a CSS animation; a
+         * lazy image there loads only once it is inside the clip, which is a
+         * bet on every browser re-checking intersection on every animated
+         * frame. The crests ARE the section, so the visible ground loads
+         * straight away (the two copies of each URL are one request).
+         *
+         * The ground CSS hides is lazy, and a lazy image that is display:none
+         * is never fetched — so a reader downloads one set of crests, not two.
+         * Switch theme and the other set appears and loads then.
          */
-        m('img.RosterCrests-img.RosterCrests-img--light', { src: team.logo, alt: '', referrerpolicy: 'no-referrer' }),
-        m('img.RosterCrests-img.RosterCrests-img--dark', { src: team.logoDark, alt: '', referrerpolicy: 'no-referrer' }),
+        crestImg('light', team.logo, dark),
+        crestImg('dark', team.logoDark, dark),
       ]
     );
+  }
+
+  /*
+   * 66px on the wall, 1.22x that on hover — asked for at the hover size so a
+   * lifted crest is as sharp as a resting one.
+   */
+  function crestImg(ground: 'light' | 'dark', url: string, dark: boolean) {
+    return m('img.RosterCrests-img.RosterCrests-img--' + ground, {
+      src: crestUrl(url, 80),
+      alt: '',
+      loading: (ground === 'dark') === dark ? undefined : 'lazy',
+      decoding: 'async',
+      referrerpolicy: 'no-referrer',
+    });
+  }
+
+  /** Which ground the stylesheet will show — the same two rules it uses. */
+  function darkGround(): boolean {
+    const theme = document.documentElement.getAttribute('data-theme');
+    if (theme === 'dark') return true;
+    if (theme === 'light') return false;
+    return !!window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   }
 
   const registry = (app as any).pageBuilder;
