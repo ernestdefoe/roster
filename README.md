@@ -68,6 +68,11 @@ every run for ever, and no other club is ever reached.
 
 - Flarum 2
 
+## Support
+
+- **Support forum:** [Roster on ernestdefoe.online](https://ernestdefoe.online/d/112)
+- **Bug reports:** [GitHub issues](https://github.com/ernestdefoe/roster/issues)
+
 ## Licence
 
 MIT.
