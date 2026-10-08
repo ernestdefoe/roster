@@ -5,7 +5,6 @@ namespace ErnestDefoe\Roster\Api\Controller;
 use ErnestDefoe\Roster\Player;
 use ErnestDefoe\Roster\Service\Leagues\Leagues;
 use ErnestDefoe\Roster\Team;
-use Flarum\Api\Exception\ResourceNotFoundException;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -30,11 +29,7 @@ class TeamController implements RequestHandlerInterface
     {
         $slug = (string) ($request->getQueryParams()['slug'] ?? '');
 
-        $team = Team::query()->where('slug', $slug)->first();
-
-        if ($team === null) {
-            throw new ResourceNotFoundException();
-        }
+        $team = Team::query()->where('slug', $slug)->firstOrFail();
 
         $collegiate = (new Leagues())->get($team->league)->collegiate;
 

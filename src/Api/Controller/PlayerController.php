@@ -5,8 +5,8 @@ namespace ErnestDefoe\Roster\Api\Controller;
 use ErnestDefoe\Roster\Player;
 use ErnestDefoe\Roster\Service\Leagues\Leagues;
 use ErnestDefoe\Roster\Service\PlayerProfile;
-use Flarum\Api\Exception\ResourceNotFoundException;
 use Illuminate\Contracts\Cache\Repository as Cache;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -37,7 +37,7 @@ class PlayerController implements RequestHandlerInterface
         $player = Player::query()->with('team')->where('slug', $slug)->first();
 
         if ($player === null || $player->team === null) {
-            throw new ResourceNotFoundException();
+            throw new ModelNotFoundException();
         }
 
         $team = $player->team;
