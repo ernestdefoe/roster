@@ -26,25 +26,25 @@ export default function registerBlocks(): void {
       const dark = darkGround();
 
       return m('.RosterCrests', [
-        m('.RosterCrests-wall', Array.from({ length: rows }, (_, i) => {
-          const slice = teams.slice(i * per, (i + 1) * per);
+        m(
+          '.RosterCrests-wall',
+          Array.from({ length: rows }, (_, i) => {
+            const slice = teams.slice(i * per, (i + 1) * per);
 
-          /*
-           * 🚨 The list is rendered TWICE per row, and that is what makes the
-           * loop seamless: the track scrolls exactly half its width and starts
-           * again, so the second copy is already in the place the first one
-           * was. One copy would snap back visibly at the end of every pass.
-           *
-           * The duplicate is aria-hidden — a screen reader should hear every
-           * club once, not twice.
-           */
-          return m('.RosterCrests-row', { key: i, className: i % 2 ? 'RosterCrests-row--reverse' : '' }, [
-            m('.RosterCrests-track', [
-              slice.map((t: any) => crest(t, false, dark)),
-              slice.map((t: any) => crest(t, true, dark)),
-            ]),
-          ]);
-        })),
+            /*
+             * 🚨 The list is rendered TWICE per row, and that is what makes the
+             * loop seamless: the track scrolls exactly half its width and starts
+             * again, so the second copy is already in the place the first one
+             * was. One copy would snap back visibly at the end of every pass.
+             *
+             * The duplicate is aria-hidden — a screen reader should hear every
+             * club once, not twice.
+             */
+            return m('.RosterCrests-row', { key: i, className: i % 2 ? 'RosterCrests-row--reverse' : '' }, [
+              m('.RosterCrests-track', [slice.map((t: any) => crest(t, false, dark)), slice.map((t: any) => crest(t, true, dark))]),
+            ]);
+          })
+        ),
 
         settings.caption || counts
           ? m('.RosterCrests-caption', [

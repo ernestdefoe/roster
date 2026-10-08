@@ -60,11 +60,18 @@ export default class RosterPlayerPage extends Page {
   }
 
   view() {
-    if (this.loading) return <div className="RosterPage"><LoadingIndicator /></div>;
+    if (this.loading)
+      return (
+        <div className="RosterPage">
+          <LoadingIndicator />
+        </div>
+      );
     if (!this.data) {
       return (
         <div className="RosterPage">
-          <div className="container"><p>{t('not_found')}</p></div>
+          <div className="container">
+            <p>{t('not_found')}</p>
+          </div>
         </div>
       );
     }
@@ -83,7 +90,9 @@ export default class RosterPlayerPage extends Page {
           trail([teamsCrumb(), { label: team.name, href: teamHref }, { label: player.name }])
         ) : (
           <div className="container">
-            <Link className="RosterTeam-back" href={teamHref}>{team.name}</Link>
+            <Link className="RosterTeam-back" href={teamHref}>
+              {team.name}
+            </Link>
           </div>
         )}
 
@@ -127,7 +136,14 @@ export default class RosterPlayerPage extends Page {
 
           {profile.about ? this.about(profile.about) : null}
           {profile.videos && profile.videos.length ? this.videos(profile.videos) : null}
-          {profile.stats ? this.table(t('career'), profile.stats.labels, profile.stats.names, profile.stats.rows.map((r: any) => [r.label, ...r.values])) : null}
+          {profile.stats
+            ? this.table(
+                t('career'),
+                profile.stats.labels,
+                profile.stats.names,
+                profile.stats.rows.map((r: any) => [r.label, ...r.values])
+              )
+            : null}
           {profile.games ? this.recentGames(profile.games) : null}
           {profile.news && profile.news.length ? this.news(profile.news) : null}
 
@@ -137,7 +153,9 @@ export default class RosterPlayerPage extends Page {
 
           {profile.espnUrl ? (
             <p className="RosterPlayer-source">
-              <a href={profile.espnUrl} target="_blank" rel="noopener noreferrer">{t('espn_profile')}</a>
+              <a href={profile.espnUrl} target="_blank" rel="noopener noreferrer">
+                {t('espn_profile')}
+              </a>
             </p>
           ) : null}
         </div>
@@ -151,7 +169,9 @@ export default class RosterPlayerPage extends Page {
         <h2>{t('about')}</h2>
         <p>{about.extract}</p>
         <p className="RosterPlayer-credit">
-          <a href={about.url} target="_blank" rel="noopener noreferrer">{t('wikipedia')}</a>
+          <a href={about.url} target="_blank" rel="noopener noreferrer">
+            {t('wikipedia')}
+          </a>
         </p>
       </section>
     );
@@ -192,7 +212,9 @@ export default class RosterPlayerPage extends Page {
                   }}
                 >
                   {v.image ? <img src={v.image} alt="" loading="lazy" /> : null}
-                  <span className="RosterVideo-play" aria-hidden="true">▶</span>
+                  <span className="RosterVideo-play" aria-hidden="true">
+                    ▶
+                  </span>
                 </button>
               )}
               <figcaption>
@@ -243,9 +265,7 @@ export default class RosterPlayerPage extends Page {
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr>
-                  {row.map((cell, i) => (i === 0 ? <th scope="row">{cell}</th> : <td>{cell}</td>))}
-                </tr>
+                <tr>{row.map((cell, i) => (i === 0 ? <th scope="row">{cell}</th> : <td>{cell}</td>))}</tr>
               ))}
             </tbody>
           </table>

@@ -9,6 +9,15 @@
   },
   "scripts": {
     "build": "webpack --mode production",
-    "dev": "webpack --mode development --watch"
-  }
+    "dev": "webpack --mode development --watch",
+    "format": "prettier --write src",
+    "format-check": "prettier --check src",
+    "check-typings": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@flarum/prettier-config": "^1.0.0",
+    "prettier": "^3.9.9",
+    "typescript": "^5.0.0"
+  },
+  "prettier": "@flarum/prettier-config"
 }

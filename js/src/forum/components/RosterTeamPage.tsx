@@ -49,7 +49,12 @@ export default class RosterTeamPage extends Page {
 
   view() {
     if (this.loading) return <LoadingIndicator />;
-    if (!this.team) return <div className="container"><p>{app.translator.trans('ernestdefoe-roster.forum.no_team')}</p></div>;
+    if (!this.team)
+      return (
+        <div className="container">
+          <p>{app.translator.trans('ernestdefoe-roster.forum.no_team')}</p>
+        </div>
+      );
 
     return (
       <div className="RosterPage RosterPage--team">
@@ -76,11 +81,7 @@ export default class RosterTeamPage extends Page {
           ) : (
             this.groups.map((group: any) => (
               <section className="RosterGroup">
-                <h3>
-                  {RosterTeamPage.LABELS[group.group]
-                    ? app.translator.trans(RosterTeamPage.LABELS[group.group])
-                    : group.group}
-                </h3>
+                <h3>{RosterTeamPage.LABELS[group.group] ? app.translator.trans(RosterTeamPage.LABELS[group.group]) : group.group}</h3>
                 <div className="RosterTable-scroll">
                   <table className="RosterTable">
                     <thead>

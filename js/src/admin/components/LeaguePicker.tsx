@@ -62,11 +62,7 @@ export default class LeaguePicker extends Component<Attrs> {
 
         {keys.map((key) => (
           <label className="checkbox">
-            <input
-              type="checkbox"
-              checked={chosen.includes(key)}
-              onchange={(e: any) => this.toggle(key, e.target.checked)}
-            />
+            <input type="checkbox" checked={chosen.includes(key)} onchange={(e: any) => this.toggle(key, e.target.checked)} />
             {registry[key]}
           </label>
         ))}

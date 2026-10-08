@@ -100,7 +100,11 @@ export default class RosterIndexPage extends Page {
                 <div className="RosterGrid">
                   {group.teams.map((team: any) => (
                     <Link className="RosterCard" href={app.route('roster.team', { slug: team.slug })}>
-                      {team.logo ? <img className="RosterCard-crest" src={crestUrl(team.logo, 34)} alt="" loading="lazy" decoding="async" /> : <span className="RosterCard-crest RosterCard-crest--none" />}
+                      {team.logo ? (
+                        <img className="RosterCard-crest" src={crestUrl(team.logo, 34)} alt="" loading="lazy" decoding="async" />
+                      ) : (
+                        <span className="RosterCard-crest RosterCard-crest--none" />
+                      )}
                       <span className="RosterCard-name">
                         {team.name}
                         {team.mascot ? <span className="RosterCard-mascot">{team.mascot}</span> : null}

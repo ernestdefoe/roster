@@ -1,0 +1,51 @@
+<?php
+
+/*
+ * The part of ernestdefoe/page-builder that CrestWallBlock builds on. Page
+ * Builder is an optional, private dependency, so it is not installed for
+ * analysis; these declarations mirror its own.
+ */
+
+namespace Ernestdefoe\PageBuilder\Block;
+
+use Flarum\User\User;
+
+interface BlockInterface
+{
+    public function type(): string;
+
+    public function name(): string;
+
+    public function icon(): string;
+
+    public function category(): string;
+
+    public function defaultSettings(): array;
+
+    public function settingsSchema(): array;
+
+    public function resolve(array $settings, User $actor): array;
+}
+
+abstract class AbstractBlock implements BlockInterface
+{
+    public function category(): string
+    {
+        return 'content';
+    }
+
+    public function defaultSettings(): array
+    {
+        return [];
+    }
+
+    public function settingsSchema(): array
+    {
+        return [];
+    }
+
+    public function resolve(array $settings, User $actor): array
+    {
+        return [];
+    }
+}
