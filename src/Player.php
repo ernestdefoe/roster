@@ -3,6 +3,7 @@
 namespace ErnestDefoe\Roster;
 
 use Flarum\Database\AbstractModel;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @property int         $id
@@ -15,6 +16,19 @@ use Flarum\Database\AbstractModel;
  * @property int|null    $jersey
  * @property int|null    $height
  * @property int|null    $weight
+ * @property string|null $first_name
+ * @property string|null $last_name
+ * @property string|null $home_city
+ * @property string|null $home_state
+ * @property string|null $home_country
+ * @property int|null    $class_year
+ * @property string|null $college
+ * @property string|null $photo_url
+ * @property int|null    $cfbd_id
+ * @property string|null $external_id
+ * @property-read string|null $height_label
+ * @property-read string|null $hometown
+ * @property-read Team|null $team
  */
 class Player extends AbstractModel
 {
@@ -37,7 +51,8 @@ class Player extends AbstractModel
         'cfbd_id' => 'integer',
     ];
 
-    public function team()
+    /** @return BelongsTo<Team, $this> */
+    public function team(): BelongsTo
     {
         return $this->belongsTo(Team::class, 'team_id');
     }

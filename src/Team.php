@@ -3,6 +3,7 @@
 namespace ErnestDefoe\Roster;
 
 use Flarum\Database\AbstractModel;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int         $id
@@ -17,6 +18,7 @@ use Flarum\Database\AbstractModel;
  * @property string|null $logo_dark
  * @property int|null    $cfbd_id
  * @property string|null $external_id
+ * @property \Carbon\Carbon|null $roster_at
  */
 class Team extends AbstractModel
 {
@@ -34,7 +36,8 @@ class Team extends AbstractModel
         'roster_at' => 'datetime',
     ];
 
-    public function players()
+    /** @return HasMany<Player, $this> */
+    public function players(): HasMany
     {
         return $this->hasMany(Player::class, 'team_id');
     }

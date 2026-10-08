@@ -28,6 +28,7 @@ class TeamPages extends Resource
         return Team::query()->whereHas('players');
     }
 
+    /** @param Team $model */
     public function url($model): string
     {
         return $this->generateRouteUrl('roster.team', ['slug' => $model->slug]);

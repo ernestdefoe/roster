@@ -114,7 +114,6 @@ class PlayerProfile
         return array_values(array_filter($items, fn ($item) => preg_match($pattern, ($item['title'] ?? '') . ' ' . ($item['description'] ?? ''))));
     }
 
-    /** @return array<string, mixed> */
     private function espnKey(string $path, string $id): string
     {
         return 'ernestdefoe-roster.profile.espn.' . md5($path . '|' . $id);
@@ -187,7 +186,7 @@ class PlayerProfile
      *
      * @return array<string, mixed>|null
      */
-    private function stats($s): ?array
+    private function stats(mixed $s): ?array
     {
         if (!is_array($s) || empty($s['labels']) || empty($s['splits'])) {
             return null;
@@ -209,7 +208,7 @@ class PlayerProfile
      *
      * @return array<string, mixed>|null
      */
-    private function games($g): ?array
+    private function games(mixed $g): ?array
     {
         if (!is_array($g) || empty($g['statistics'][0]['events']) || empty($g['events'])) {
             return null;
@@ -244,7 +243,7 @@ class PlayerProfile
     }
 
     /** @return array<string, mixed>|null */
-    private function nextGame($n): ?array
+    private function nextGame(mixed $n): ?array
     {
         $event = $n['league']['events'][0] ?? null;
         if (!is_array($event)) {
@@ -429,7 +428,7 @@ class PlayerProfile
      * href and src on the player page, so a feed that ever carried a
      * javascript: or data: address must not pass it through.
      */
-    private static function web($url): ?string
+    private static function web(mixed $url): ?string
     {
         return is_string($url) && preg_match('#^https?://[^\s"\'<>]+$#i', $url) ? $url : null;
     }
