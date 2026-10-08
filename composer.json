@@ -2,7 +2,17 @@
     "name": "ernestdefoe/roster",
     "description": "Every team, roster and player in one place. Browse by conference or division, open a club for its roster, then open a player for who he is. College football from CollegeFootballData; the NFL, NBA, MLB, NHL and league football from ESPN, which needs no key.",
     "type": "flarum-extension",
-    "keywords": ["flarum", "extension", "roster", "college football", "nfl", "nba", "mlb", "nhl", "sports"],
+    "keywords": [
+        "flarum",
+        "extension",
+        "roster",
+        "college football",
+        "nfl",
+        "nba",
+        "mlb",
+        "nhl",
+        "sports"
+    ],
     "license": "MIT",
     "authors": [
         {
@@ -24,6 +34,11 @@
             "ErnestDefoe\\Roster\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "ErnestDefoe\\Roster\\Tests\\": "tests/"
+        }
+    },
     "extra": {
         "flarum-extension": {
             "title": "Roster",
@@ -34,5 +49,26 @@
                 "color": "#fff"
             }
         }
-    }
+    },
+    "require-dev": {
+        "flarum/phpstan": "^2.0",
+        "flarum/testing": "^2.0",
+        "fof/sitemap": "^3.0"
+    },
+    "scripts": {
+        "test": [
+            "@test:integration"
+        ],
+        "test:integration": "phpunit -c tests/phpunit.integration.xml",
+        "test:setup": "@php tests/integration/setup.php",
+        "analyse:phpstan": "phpstan analyse"
+    },
+    "scripts-descriptions": {
+        "test": "Runs all tests.",
+        "test:integration": "Runs all integration tests.",
+        "test:setup": "Sets up a database for use with integration tests. Execute this only once.",
+        "analyse:phpstan": "Run static analysis"
+    },
+    "minimum-stability": "beta",
+    "prefer-stable": true
 }

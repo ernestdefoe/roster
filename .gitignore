@@ -7,3 +7,6 @@
 # blank page, because the JavaScript was simply not there.
 /js/node_modules
 /vendor
+.phpunit.result.cache
+/tests/integration/tmp
+/composer.lock
