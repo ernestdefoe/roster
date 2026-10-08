@@ -5,6 +5,7 @@ import Link from 'flarum/common/components/Link';
 import humanTime from 'flarum/common/helpers/humanTime';
 import { hasWaymark, trail, teamsCrumb } from '../waymark';
 import crestUrl from '../crest';
+import type Mithril from 'mithril';
 
 declare const m: any;
 
@@ -224,7 +225,7 @@ export default class RosterPlayerPage extends Page {
     return this.table(t('recent_games'), games.labels, games.names, rows);
   }
 
-  table(title: string, labels: string[], names: string[], rows: any[][]) {
+  table(title: Mithril.Children, labels: string[], names: string[], rows: any[][]) {
     return (
       <section className="RosterPlayer-section">
         <h2>{title}</h2>

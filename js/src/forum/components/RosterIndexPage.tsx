@@ -3,6 +3,7 @@ import { trail, teamsCrumb } from '../waymark';
 import Page from 'flarum/common/components/Page';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Link from 'flarum/common/components/Link';
+import extractText from 'flarum/common/utils/extractText';
 import crestUrl from '../crest';
 
 declare const m: any;
@@ -22,7 +23,7 @@ export default class RosterIndexPage extends Page {
 
   oninit(vnode: any) {
     super.oninit(vnode);
-    app.history.push('roster', app.translator.trans('ernestdefoe-roster.forum.title'));
+    app.history.push('roster', extractText(app.translator.trans('ernestdefoe-roster.forum.title')));
     this.load();
   }
 
