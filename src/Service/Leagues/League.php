@@ -1,7 +1,5 @@
 <?php
 
-
-
 namespace ErnestDefoe\Roster\Service\Leagues;
 
 /**

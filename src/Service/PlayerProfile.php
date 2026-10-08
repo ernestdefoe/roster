@@ -53,7 +53,7 @@ class PlayerProfile
             return false;
         }
 
-        return $this->cache->has('ernestdefoe-roster.profile.wiki.' . $player->id);
+        return $this->cache->has('ernestdefoe-roster.profile.wiki.'.$player->id);
     }
 
     /**
@@ -102,21 +102,21 @@ class PlayerProfile
     {
         $parts = preg_split('/\s+/', trim($name)) ?: [];
         // "Jr.", "III" and the like are not the name anybody writes.
-        $parts = array_values(array_filter($parts, fn ($p) => !preg_match('/^(jr\.?|sr\.?|ii|iii|iv|v)$/i', $p)));
+        $parts = array_values(array_filter($parts, fn ($p) => ! preg_match('/^(jr\.?|sr\.?|ii|iii|iv|v)$/i', $p)));
         $surname = end($parts) ?: '';
 
         if ($surname === '' || mb_strlen($surname) < 2) {
             return [];
         }
 
-        $pattern = '/\b' . preg_quote($surname, '/') . '\b/iu';
+        $pattern = '/\b'.preg_quote($surname, '/').'\b/iu';
 
-        return array_values(array_filter($items, fn ($item) => preg_match($pattern, ($item['title'] ?? '') . ' ' . ($item['description'] ?? ''))));
+        return array_values(array_filter($items, fn ($item) => preg_match($pattern, ($item['title'] ?? '').' '.($item['description'] ?? ''))));
     }
 
     private function espnKey(string $path, string $id): string
     {
-        return 'ernestdefoe-roster.profile.espn.' . md5($path . '|' . $id);
+        return 'ernestdefoe-roster.profile.espn.'.md5($path.'|'.$id);
     }
 
     private function espn(string $path, string $id, bool $mayFetch): array
@@ -129,15 +129,15 @@ class PlayerProfile
         }
 
         if (! $mayFetch) {
-            $stale = $this->cache->get($key . '.stale');
+            $stale = $this->cache->get($key.'.stale');
 
             return is_array($stale) ? $stale : [];
         }
 
-        $base = self::ESPN . '/' . $path . '/athletes/' . rawurlencode($id);
+        $base = self::ESPN.'/'.$path.'/athletes/'.rawurlencode($id);
 
         $athlete = $this->json($base);
-        $overview = $this->json($base . '/overview');
+        $overview = $this->json($base.'/overview');
 
         if ($athlete === null && $overview === null) {
             $this->cache->put($key, [], self::TTL_FAILED);
@@ -156,7 +156,7 @@ class PlayerProfile
         ];
 
         $this->cache->put($key, $out, self::TTL);
-        $this->cache->put($key . '.stale', $out, self::STALE_TTL);
+        $this->cache->put($key.'.stale', $out, self::STALE_TTL);
 
         return $out;
     }
@@ -188,7 +188,7 @@ class PlayerProfile
      */
     private function stats(mixed $s): ?array
     {
-        if (!is_array($s) || empty($s['labels']) || empty($s['splits'])) {
+        if (! is_array($s) || empty($s['labels']) || empty($s['splits'])) {
             return null;
         }
 
@@ -210,7 +210,7 @@ class PlayerProfile
      */
     private function games(mixed $g): ?array
     {
-        if (!is_array($g) || empty($g['statistics'][0]['events']) || empty($g['events'])) {
+        if (! is_array($g) || empty($g['statistics'][0]['events']) || empty($g['events'])) {
             return null;
         }
 
@@ -246,7 +246,7 @@ class PlayerProfile
     private function nextGame(mixed $n): ?array
     {
         $event = $n['league']['events'][0] ?? null;
-        if (!is_array($event)) {
+        if (! is_array($event)) {
             return null;
         }
 
@@ -279,7 +279,7 @@ class PlayerProfile
             $api = (string) ($item['links']['api']['self']['href'] ?? '');
 
             // The clip id: in the API link (/clips/50035665) or the page's (/id/50035665).
-            if (!preg_match('#/clips/(\d+)#', $api, $m) && !preg_match('#/id/(\d+)#', $web, $m)) {
+            if (! preg_match('#/clips/(\d+)#', $api, $m) && ! preg_match('#/id/(\d+)#', $web, $m)) {
                 continue;
             }
 
@@ -311,7 +311,7 @@ class PlayerProfile
             }
 
             $url = self::web($item['links']['web']['href'] ?? null);
-            if (!$url || empty($item['headline'])) {
+            if (! $url || empty($item['headline'])) {
                 continue;
             }
 
@@ -334,7 +334,7 @@ class PlayerProfile
     private function espnLink(array $links): ?string
     {
         foreach ($links as $link) {
-            if (in_array('playercard', $link['rel'] ?? [], true) && !empty($link['href'])) {
+            if (in_array('playercard', $link['rel'] ?? [], true) && ! empty($link['href'])) {
                 return self::web($link['href']);
             }
         }
@@ -356,7 +356,7 @@ class PlayerProfile
      */
     private function wikipedia(string $name, Team $team, string $playerId, bool $mayFetch): ?array
     {
-        $key = 'ernestdefoe-roster.profile.wiki.' . $playerId;
+        $key = 'ernestdefoe-roster.profile.wiki.'.$playerId;
 
         if ($this->cache->has($key)) {
             $hit = $this->cache->get($key);
@@ -385,10 +385,10 @@ class PlayerProfile
             return null;
         }
 
-        $search = $this->json(self::WIKI . '/w/api.php', [
+        $search = $this->json(self::WIKI.'/w/api.php', [
             'action' => 'query',
             'list' => 'search',
-            'srsearch' => '"' . $name . '" ' . $school . ' football',
+            'srsearch' => '"'.$name.'" '.$school.' football',
             'srlimit' => 4,
             'format' => 'json',
         ], true);
@@ -401,7 +401,7 @@ class PlayerProfile
                 continue;
             }
 
-            $summary = $this->json(self::WIKI . '/api/rest_v1/page/summary/' . rawurlencode(str_replace(' ', '_', $title)), [], true);
+            $summary = $this->json(self::WIKI.'/api/rest_v1/page/summary/'.rawurlencode(str_replace(' ', '_', $title)), [], true);
             $extract = (string) ($summary['extract'] ?? '');
 
             if ($extract === '' || ($summary['type'] ?? '') === 'disambiguation') {
@@ -415,7 +415,7 @@ class PlayerProfile
             return [
                 'title' => $title,
                 'extract' => $extract,
-                'url' => self::web($summary['content_urls']['desktop']['page'] ?? null) ?? (self::WIKI . '/wiki/' . rawurlencode(str_replace(' ', '_', $title))),
+                'url' => self::web($summary['content_urls']['desktop']['page'] ?? null) ?? (self::WIKI.'/wiki/'.rawurlencode(str_replace(' ', '_', $title))),
                 'image' => self::web($summary['thumbnail']['source'] ?? null),
             ];
         }

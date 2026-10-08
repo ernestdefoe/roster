@@ -55,7 +55,7 @@ class RosterSync
         foreach ($following as $key) {
             $league = $this->leagues->get($key);
 
-            if (!$this->espn->supports($league)) {
+            if (! $this->espn->supports($league)) {
                 continue;
             }
 
@@ -160,7 +160,7 @@ class RosterSync
         foreach ($due as $team) {
             $league = $this->leagues->get($team->league);
 
-            if (!$this->espn->supports($league)) {
+            if (! $this->espn->supports($league)) {
                 continue;
             }
 
@@ -228,7 +228,7 @@ class RosterSync
             $known[(string) $row['external_id']] = Player::query()->create($values + [
                 'league' => $league->key,
                 'external_id' => $row['external_id'],
-                'slug' => $this->slug($league, (string) $row['name']) . '-' . $row['external_id'],
+                'slug' => $this->slug($league, (string) $row['name']).'-'.$row['external_id'],
             ]);
 
             $written++;
@@ -291,6 +291,6 @@ class RosterSync
     {
         $slug = Str::slug($value);
 
-        return Str::limit($league->key . '-' . ($slug ?: substr(md5($value), 0, 10)), 199, '');
+        return Str::limit($league->key.'-'.($slug ?: substr(md5($value), 0, 10)), 199, '');
     }
 }

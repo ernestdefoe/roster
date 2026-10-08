@@ -2,11 +2,11 @@
 
 namespace ErnestDefoe\Roster;
 
-use ErnestDefoe\Roster\Frontend\RosterPageContent;
 use ErnestDefoe\Roster\Api\Controller\PlayerController;
 use ErnestDefoe\Roster\Api\Controller\TeamController;
 use ErnestDefoe\Roster\Api\Controller\TeamsController;
 use ErnestDefoe\Roster\Console\SyncCommand;
+use ErnestDefoe\Roster\Frontend\RosterPageContent;
 use ErnestDefoe\Roster\Service\Leagues\Leagues;
 use Flarum\Extend;
 use Flarum\Frontend\Document;
@@ -19,16 +19,16 @@ $extenders = [
      * in-app navigation works.
      */
     (new Extend\Frontend('forum'))
-        ->js(__DIR__ . '/js/dist/forum.js')
+        ->js(__DIR__.'/js/dist/forum.js')
         // The roster pages are their own chunks, loaded only when opened.
-        ->jsDirectory(__DIR__ . '/js/dist/forum')
-        ->css(__DIR__ . '/resources/less/forum.less')
+        ->jsDirectory(__DIR__.'/js/dist/forum')
+        ->css(__DIR__.'/resources/less/forum.less')
         ->route('/roster', 'roster.index', RosterPageContent::class)
         ->route('/roster/{slug}', 'roster.team', RosterPageContent::class)
         ->route('/roster/{slug}/{player}', 'roster.player', RosterPageContent::class),
 
     (new Extend\Frontend('admin'))
-        ->js(__DIR__ . '/js/dist/admin.js')
+        ->js(__DIR__.'/js/dist/admin.js')
         /*
          * 🚨 The league list reaches the admin from the registry rather than
          * being written into the JavaScript. A second copy of the list in the
@@ -38,7 +38,7 @@ $extenders = [
             $document->payload['rosterLeagues'] = (new Leagues())->choices();
         }),
 
-    new Extend\Locales(__DIR__ . '/resources/locale'),
+    new Extend\Locales(__DIR__.'/resources/locale'),
 
     (new Extend\Routes('api'))
         ->get('/roster/teams', 'roster.api.teams', TeamsController::class)
@@ -92,5 +92,3 @@ if (class_exists(\FoF\Sitemap\Extend\Sitemap::class)) {
 }
 
 return $extenders;
-
-

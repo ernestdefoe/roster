@@ -75,8 +75,8 @@ class PlayerController implements RequestHandlerInterface
     {
         $minute = intdiv(time(), 60);
 
-        return $this->spend('ernestdefoe-roster.builds.ip.' . sha1($ip) . '.' . $minute, self::BUILDS_PER_IP_PER_MINUTE)
-            && $this->spend('ernestdefoe-roster.builds.all.' . $minute, self::BUILDS_PER_MINUTE);
+        return $this->spend('ernestdefoe-roster.builds.ip.'.sha1($ip).'.'.$minute, self::BUILDS_PER_IP_PER_MINUTE)
+            && $this->spend('ernestdefoe-roster.builds.all.'.$minute, self::BUILDS_PER_MINUTE);
     }
 
     private function spend(string $key, int $limit): bool

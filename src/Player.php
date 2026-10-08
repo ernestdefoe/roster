@@ -68,7 +68,7 @@ class Player extends AbstractModel
     {
         $inches = (int) $this->height;
 
-        return $inches > 0 ? intdiv($inches, 12) . '-' . ($inches % 12) : null;
+        return $inches > 0 ? intdiv($inches, 12).'-'.($inches % 12) : null;
     }
 
     /** The hometown, or null when neither half is known. */

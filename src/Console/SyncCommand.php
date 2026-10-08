@@ -23,7 +23,7 @@ class SyncCommand extends Command
         $result = $sync->run();
 
         if (isset($result['skipped'])) {
-            $this->line('Nothing to do: ' . $result['skipped'] . '.');
+            $this->line('Nothing to do: '.$result['skipped'].'.');
 
             return self::SUCCESS;
         }

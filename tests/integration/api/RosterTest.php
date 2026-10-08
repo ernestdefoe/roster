@@ -42,7 +42,7 @@ class RosterTest extends TestCase
     private function offline(): void
     {
         $mock = new MockHandler();
-        $handler = HandlerStack::create(function (RequestInterface $request) use ($mock) {
+        $handler = HandlerStack::create(function (RequestInterface $request) {
             $this->outbound[] = (string) $request->getUri();
 
             return \GuzzleHttp\Promise\Create::promiseFor(new Response(404));

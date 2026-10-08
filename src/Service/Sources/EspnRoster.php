@@ -1,12 +1,9 @@
 <?php
 
-
-
 namespace ErnestDefoe\Roster\Service\Sources;
 
-use GuzzleHttp\Client as HttpClient;
-
 use ErnestDefoe\Roster\Service\Leagues\League;
+use GuzzleHttp\Client as HttpClient;
 
 /**
  * ESPN's team and roster endpoints, for every league that is not college
@@ -61,7 +58,7 @@ class EspnRoster
      */
     public function teams(League $league): array
     {
-        if (!$this->supports($league)) {
+        if (! $this->supports($league)) {
             return [];
         }
 
@@ -77,7 +74,7 @@ class EspnRoster
         $rows = [];
 
         for ($page = 1; $page <= self::MAX_TEAM_PAGES; $page++) {
-            $body = $this->get($league->espnPath . '/teams', ['limit' => '400', 'page' => (string) $page]);
+            $body = $this->get($league->espnPath.'/teams', ['limit' => '400', 'page' => (string) $page]);
 
             if ($body === null) {
                 break;
@@ -85,7 +82,7 @@ class EspnRoster
 
             $chunk = $body['sports'][0]['leagues'][0]['teams'] ?? [];
 
-            if (!is_array($chunk) || $chunk === []) {
+            if (! is_array($chunk) || $chunk === []) {
                 break;
             }
 
@@ -121,11 +118,11 @@ class EspnRoster
         foreach ($rows as $row) {
             $team = is_array($row) ? ($row['team'] ?? null) : null;
 
-            if (!is_array($team) || ($team['id'] ?? '') === '') {
+            if (! is_array($team) || ($team['id'] ?? '') === '') {
                 continue;
             }
 
-            if ($scope !== [] && !isset($scope[(string) $team['id']])) {
+            if ($scope !== [] && ! isset($scope[(string) $team['id']])) {
                 continue;
             }
 
@@ -170,7 +167,7 @@ class EspnRoster
      */
     public function divisions(League $league): array
     {
-        if (!$this->supports($league)) {
+        if (! $this->supports($league)) {
             return [];
         }
 
@@ -184,7 +181,7 @@ class EspnRoster
         }
 
         // `level=3` is conference → division → team. Levels 1 and 2 stop short.
-        $body = $this->get($league->espnPath . '/standings', ['level' => '3'], 'https://site.api.espn.com/apis/v2/sports');
+        $body = $this->get($league->espnPath.'/standings', ['level' => '3'], 'https://site.api.espn.com/apis/v2/sports');
 
         if ($body === null) {
             // Not cached: a failed call is worth retrying, unlike an empty answer.
@@ -194,7 +191,7 @@ class EspnRoster
         $out = [];
 
         foreach ((array) ($body['children'] ?? []) as $conference) {
-            if (!is_array($conference)) {
+            if (! is_array($conference)) {
                 continue;
             }
 
@@ -208,7 +205,7 @@ class EspnRoster
             $groups = $groups === [] ? [$conference] : $groups;
 
             foreach ($groups as $group) {
-                if (!is_array($group)) {
+                if (! is_array($group)) {
                     continue;
                 }
 
@@ -234,7 +231,7 @@ class EspnRoster
      */
     public function roster(League $league, string $teamId): array
     {
-        if (!$this->supports($league) || $teamId === '') {
+        if (! $this->supports($league) || $teamId === '') {
             return [];
         }
 
@@ -250,7 +247,7 @@ class EspnRoster
          * announce itself the same silent way, so the number is deliberate
          * rather than merely large.
          */
-        $body = $this->get($league->espnPath . '/teams/' . rawurlencode($teamId) . '/roster', ['limit' => '200']);
+        $body = $this->get($league->espnPath.'/teams/'.rawurlencode($teamId).'/roster', ['limit' => '200']);
 
         /*
          * 🚨 An empty roster is not an error to shout about. ESPN answers this
@@ -266,14 +263,14 @@ class EspnRoster
 
         $athletes = $body['athletes'] ?? [];
 
-        if (!is_array($athletes)) {
+        if (! is_array($athletes)) {
             return [];
         }
 
         $out = [];
 
         foreach ($athletes as $entry) {
-            if (!is_array($entry)) {
+            if (! is_array($entry)) {
                 continue;
             }
 
@@ -311,7 +308,7 @@ class EspnRoster
     /** @return array<string, mixed>|null */
     private function player(mixed $athlete, string $group): ?array
     {
-        if (!is_array($athlete) || ($athlete['id'] ?? '') === '') {
+        if (! is_array($athlete) || ($athlete['id'] ?? '') === '') {
             return null;
         }
 
@@ -394,7 +391,7 @@ class EspnRoster
      */
     private function jersey(mixed $value): ?int
     {
-        if ($value === null || $value === '' || !is_numeric($value)) {
+        if ($value === null || $value === '' || ! is_numeric($value)) {
             return null;
         }
 
@@ -408,7 +405,7 @@ class EspnRoster
      */
     private function number(mixed $value): ?int
     {
-        if ($value === null || $value === '' || !is_numeric($value)) {
+        if ($value === null || $value === '' || ! is_numeric($value)) {
             return null;
         }
 
@@ -452,7 +449,7 @@ class EspnRoster
     private function logo(array $team, bool $dark): string
     {
         foreach (is_array($team['logos'] ?? null) ? $team['logos'] : [] as $logo) {
-            if (!is_array($logo)) {
+            if (! is_array($logo)) {
                 continue;
             }
 
@@ -480,7 +477,7 @@ class EspnRoster
          * survives a refactor. That trap cost the Convoro build of this an
          * afternoon and Picks a whole season of live scores.
          */
-        $response = $this->http->get($base . '/' . ltrim($path, '/'), [
+        $response = $this->http->get($base.'/'.ltrim($path, '/'), [
             'query' => $params,
             'timeout' => self::TIMEOUT,
             'headers' => [
