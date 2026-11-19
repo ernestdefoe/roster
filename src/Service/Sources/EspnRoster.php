@@ -20,7 +20,7 @@ use ErnestDefoe\Roster\Service\Http\JsonFetcher;
  * NBA answers a FLAT list of athletes. Reading only one loses every player in
  * half the leagues, and the failure is silent: an empty roster page.
  *
- * 🚨 No API key and no allowance, which is why it is the source.
+ * 🚨 It needs no API key, which is why it is the source.
  */
 class EspnRoster
 {

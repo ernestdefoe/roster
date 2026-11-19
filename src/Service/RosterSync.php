@@ -13,11 +13,9 @@ use Illuminate\Support\Str;
 /**
  * Clubs and rosters, from ESPN.
  *
- * 🚨 ESPN charges nothing and needs no key, so there is no budget guard and no
- * resumable cursor here — the machinery the college-football side needs for a
- * thousand-call monthly allowance would be serving a constraint that does not
- * exist. What this needs instead is a plain per-run ceiling, because one roster
- * is one call and a league is thirty-odd of them.
+ * 🚨 ESPN charges nothing and needs no key, so there is no budget to guard.
+ * What this needs instead is a plain per-run ceiling, because one roster is one
+ * call and a league is thirty-odd of them.
  */
 class RosterSync
 {

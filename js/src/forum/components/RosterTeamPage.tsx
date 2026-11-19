@@ -1,11 +1,12 @@
 import app from 'flarum/forum/app';
-import Page from 'flarum/common/components/Page';
+import Page, { type IPageAttrs } from 'flarum/common/components/Page';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Link from 'flarum/common/components/Link';
 import { hasWaymark, trail, teamsCrumb } from '../waymark';
 import crestUrl from '../crest';
 import type Team from '../models/Team';
 import type Player from '../models/Player';
+import type Mithril from 'mithril';
 
 type Group = { name: string; players: Player[] };
 
@@ -24,7 +25,7 @@ export default class RosterTeamPage extends Page {
     other: 'ernestdefoe-roster.forum.group.other',
   };
 
-  oninit(vnode: any) {
+  oninit(vnode: Mithril.Vnode<IPageAttrs, this>) {
     super.oninit(vnode);
 
     app.store

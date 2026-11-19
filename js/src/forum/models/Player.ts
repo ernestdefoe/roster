@@ -1,5 +1,6 @@
 import Model from 'flarum/common/Model';
 import type Team from './Team';
+import type { Profile } from '../types';
 
 /** A player, as `/api/roster-players` serves him. */
 export default class Player extends Model {
@@ -14,6 +15,6 @@ export default class Player extends Model {
   classYear = Model.attribute<number | null>('classYear');
   photo = Model.attribute<string | null>('photo');
   /** Only on his own page: what ESPN and Wikipedia have on him, and whether more is on its way. */
-  profile = Model.attribute<Record<string, any> | undefined>('profile');
+  profile = Model.attribute<Profile | undefined>('profile');
   team = Model.hasOne<Team>('team');
 }

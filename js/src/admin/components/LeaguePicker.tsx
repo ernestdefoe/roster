@@ -45,7 +45,7 @@ export default class LeaguePicker extends Component<Attrs> {
      * in the bundle goes stale the first time an extension registers a league,
      * which is the whole reason the registry exists.
      */
-    const registry: Record<string, string> = (app.data as any)?.rosterLeagues ?? {};
+    const registry: Record<string, string> = (app.data as typeof app.data & { rosterLeagues?: Record<string, string> }).rosterLeagues ?? {};
     const chosen = this.chosen();
     const keys = Object.keys(registry);
 
@@ -60,7 +60,7 @@ export default class LeaguePicker extends Component<Attrs> {
 
         {keys.map((key) => (
           <label className="checkbox">
-            <input type="checkbox" checked={chosen.includes(key)} onchange={(e: any) => this.toggle(key, e.target.checked)} />
+            <input type="checkbox" checked={chosen.includes(key)} onchange={(e: Event) => this.toggle(key, (e.target as HTMLInputElement).checked)} />
             {registry[key]}
           </label>
         ))}

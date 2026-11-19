@@ -1,5 +1,6 @@
 import Extend from 'flarum/common/extenders';
 import LeaguePicker from './components/LeaguePicker';
+import type ExtensionPage from 'flarum/admin/components/ExtensionPage';
 
 /**
  * Declarative admin registration — the Flarum 2 way.
@@ -22,7 +23,7 @@ export default [
      * page's own `setting()` stream, and therefore the only way the tick boxes
      * are ever saved.
      */
-    .customSetting(function (this: any) {
-      return m(LeaguePicker, { value: this.setting('ernestdefoe-roster.leagues', '') });
+    .customSetting(function (this: ExtensionPage) {
+      return m(LeaguePicker, { value: this.setting('ernestdefoe-roster.leagues') });
     }),
 ];

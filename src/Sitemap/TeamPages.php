@@ -43,9 +43,4 @@ class TeamPages extends Resource
     {
         return Frequency::WEEKLY;
     }
-
-    public function enabled(): bool
-    {
-        return true;
-    }
 }

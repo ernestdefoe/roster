@@ -1,5 +1,19 @@
 import app from 'flarum/forum/app';
 import crestUrl from './crest';
+import type Mithril from 'mithril';
+import type { CrestTeam, CrestWallData, CrestWallSettings } from './types';
+
+type BlockAttrs = { settings?: CrestWallSettings; data?: CrestWallData };
+
+/** Page Builder's registry, once its own initializer has run; a queue it drains until then. */
+type BlockRegistry = { registerBlock(type: string, component: Mithril.Component<BlockAttrs>): void };
+type BlockQueue = { type: string; component: Mithril.Component<BlockAttrs> }[];
+
+declare global {
+  interface Window {
+    PageBuilderBlockQueue?: BlockQueue;
+  }
+}
 
 /**
  * The crest wall, offered to Page Builder.
@@ -10,25 +24,25 @@ import crestUrl from './crest';
  * either of them decides.
  */
 export default function registerBlocks(): void {
-  const component = { view: (vnode: any) => wall(vnode.attrs.settings || {}, vnode.attrs.data || {}) };
+  const component: Mithril.Component<BlockAttrs> = { view: (vnode) => wall(vnode.attrs.settings || {}, vnode.attrs.data || {}) };
 
-  const registry = (app as any).pageBuilder;
+  const registry = (app as typeof app & { pageBuilder?: BlockRegistry }).pageBuilder;
 
   if (registry && typeof registry.registerBlock === 'function') {
     registry.registerBlock('roster-crests', component);
     return;
   }
 
-  const queue = ((window as any).PageBuilderBlockQueue = (window as any).PageBuilderBlockQueue || []);
+  const queue = (window.PageBuilderBlockQueue = window.PageBuilderBlockQueue || []);
   queue.push({ type: 'roster-crests', component });
 }
 
-function wall(settings: any, data: any) {
-  const teams: any[] = data.teams || [];
+function wall(settings: CrestWallSettings, data: CrestWallData) {
+  const teams: CrestTeam[] = data.teams || [];
 
   if (teams.length === 0) return null;
 
-  const rows = Math.max(1, Math.min(parseInt(settings.rows, 10) || 2, 3));
+  const rows = Math.max(1, Math.min(parseInt(String(settings.rows ?? ''), 10) || 2, 3));
   const per = Math.ceil(teams.length / rows);
   const dark = darkGround();
 
@@ -48,7 +62,7 @@ function wall(settings: any, data: any) {
          * club once, not twice.
          */
         return m('.RosterCrests-row', { key: i, className: i % 2 ? 'RosterCrests-row--reverse' : '' }, [
-          m('.RosterCrests-track', [slice.map((t: any) => crest(t, false, dark)), slice.map((t: any) => crest(t, true, dark))]),
+          m('.RosterCrests-track', [slice.map((t) => crest(t, false, dark)), slice.map((t) => crest(t, true, dark))]),
         ]);
       })
     ),
@@ -67,7 +81,7 @@ function caption(text: string | undefined, counts: { teams: number; players: num
   ]);
 }
 
-function crest(team: any, duplicate: boolean, dark: boolean) {
+function crest(team: CrestTeam, duplicate: boolean, dark: boolean) {
   return m(
     'a.RosterCrests-crest',
     {

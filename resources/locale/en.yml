@@ -11,6 +11,7 @@ ernestdefoe-roster:
     meta:
       index_title: Rosters
       team_title: "{team} roster"
+      player_title: "{player} — {team}"
 
     crests:
       programs: "{count, plural, one {<b>#</b> program} other {<b>#</b> programs}}"
@@ -76,7 +77,7 @@ ernestdefoe-roster:
     leagues_label: Leagues to carry
     leagues_help: >-
       Tick the competitions this site should carry rosters for. They all come
-      from ESPN, which needs no key and costs nothing against your allowance.
+      from ESPN, which needs no key.
       College football brings a class year with it; professional leagues have
       no classes, so their rosters have no Class column.
     leagues_empty: >-

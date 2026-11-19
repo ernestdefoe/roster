@@ -11,7 +11,7 @@ use Illuminate\Support\Carbon;
 /**
  * A player page's profile: answered from the cache, built on the queue.
  *
- * 🚨 Building one costs up to four outbound calls and several seconds, so it
+ * 🚨 Building one costs up to seven outbound calls and several seconds, so it
  * is a queued job: on a forum with a queue worker it runs in the background,
  * and the page gets what the cache holds (the fresh copy, else the last good
  * one) plus a `pending` flag, and asks again a few seconds later. On Flarum's

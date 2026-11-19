@@ -1,11 +1,12 @@
 import app from 'flarum/forum/app';
 import { trail, teamsCrumb } from '../waymark';
-import Page from 'flarum/common/components/Page';
+import Page, { type IPageAttrs } from 'flarum/common/components/Page';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Link from 'flarum/common/components/Link';
 import extractText from 'flarum/common/utils/extractText';
 import crestUrl from '../crest';
 import type Team from '../models/Team';
+import type Mithril from 'mithril';
 
 type League = { key: string; name: string };
 type Conference = { name: string; teams: Team[] };
@@ -22,7 +23,7 @@ export default class RosterIndexPage extends Page {
   league = '';
   conferences: Conference[] = [];
 
-  oninit(vnode: any) {
+  oninit(vnode: Mithril.Vnode<IPageAttrs, this>) {
     super.oninit(vnode);
     app.history.push('roster', extractText(app.translator.trans('ernestdefoe-roster.forum.title')));
     this.load();

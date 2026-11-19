@@ -48,13 +48,6 @@ class Player extends AbstractModel
 
     protected $table = 'roster_players';
 
-    protected $fillable = [
-        'team_id', 'league', 'name', 'slug', 'first_name', 'last_name',
-        'position', 'position_group', 'jersey', 'height', 'weight',
-        'home_city', 'home_state', 'home_country', 'class_year',
-        'college', 'photo_url', 'external_id',
-    ];
-
     protected $casts = [
         'jersey' => 'integer',
         'height' => 'integer',

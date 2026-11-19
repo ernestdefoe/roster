@@ -47,7 +47,10 @@ class RosterPageContent
         $player = $playerSlug === '' ? null : Player::query()->with('team')->where('slug', $playerSlug)->first();
 
         if ($player !== null && $player->team !== null) {
-            $document->title = trim((string) $player->name).' — '.trim((string) $player->team->name);
+            $document->title = $this->translator->trans('ernestdefoe-roster.forum.meta.player_title', [
+                'player' => trim((string) $player->name),
+                'team' => trim((string) $player->team->name),
+            ]);
 
             return;
         }

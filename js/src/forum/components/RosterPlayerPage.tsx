@@ -1,5 +1,5 @@
 import app from 'flarum/forum/app';
-import Page from 'flarum/common/components/Page';
+import Page, { type IPageAttrs } from 'flarum/common/components/Page';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Link from 'flarum/common/components/Link';
 import humanTime from 'flarum/common/helpers/humanTime';
@@ -8,8 +8,9 @@ import crestUrl from '../crest';
 import type Mithril from 'mithril';
 import type Player from '../models/Player';
 import type Team from '../models/Team';
+import type { About, Bio, GamesTable, NewsItem, Profile, Video } from '../types';
 
-const t = (key: string, params?: any) => app.translator.trans(`ernestdefoe-roster.forum.player_page.${key}`, params);
+const t = (key: string, params: Record<string, unknown> = {}) => app.translator.trans(`ernestdefoe-roster.forum.player_page.${key}`, params);
 
 /**
  * One player: who he is, how he has played, and what has been said and shown
@@ -27,18 +28,21 @@ export default class RosterPlayerPage extends Page {
   /** Times this page has asked again for a profile that was still being gathered. */
   retries = 0;
   retryTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Set once the reader has left, so an answer still on its way changes nothing. */
+  removed = false;
 
   /** A profile is gathered on the queue; the page asks again this often, this many times. */
   static readonly RETRY_MS = 4000;
   static readonly MAX_RETRIES = 4;
 
-  oninit(vnode: any) {
+  oninit(vnode: Mithril.Vnode<IPageAttrs, this>) {
     super.oninit(vnode);
     this.load();
   }
 
-  onremove(vnode: any) {
+  onremove(vnode: Mithril.VnodeDOM<IPageAttrs, this>) {
     super.onremove(vnode);
+    this.removed = true;
     if (this.retryTimer) clearTimeout(this.retryTimer);
   }
 
@@ -52,6 +56,7 @@ export default class RosterPlayerPage extends Page {
     app.store
       .find<Player>('roster-players', m.route.param('player'), { include: 'team' })
       .then((player) => {
+        if (this.removed) return;
         this.player = player;
         app.setTitle(player.name());
         if (!again) app.history.push('roster.player', player.name());
@@ -69,7 +74,7 @@ export default class RosterPlayerPage extends Page {
 
   /** While the queue is still gathering his profile, look again shortly. */
   askAgainIfPending() {
-    if (!this.player?.profile()?.pending || this.retries >= RosterPlayerPage.MAX_RETRIES) return;
+    if (this.removed || !this.player?.profile()?.pending || this.retries >= RosterPlayerPage.MAX_RETRIES) return;
 
     this.retries++;
     this.retryTimer = setTimeout(() => this.load(true), RosterPlayerPage.RETRY_MS);
@@ -122,7 +127,7 @@ export default class RosterPlayerPage extends Page {
   }
 
   hero(player: Player, team: Team, teamHref: string) {
-    const bio = player.profile()?.bio || {};
+    const bio: Bio = player.profile()?.bio ?? {};
     const photo = bio.headshot || player.photo() || null;
     const jersey = player.jersey();
 
@@ -150,8 +155,8 @@ export default class RosterPlayerPage extends Page {
     );
   }
 
-  body(player: Player, profile: Record<string, any>) {
-    const bio = profile.bio || {};
+  body(player: Player, profile: Partial<Profile>) {
+    const bio: Bio = profile.bio ?? {};
     const weight = player.weight();
     const empty = !profile.about && !profile.stats && !(profile.videos || []).length && !(profile.news || []).length;
 
@@ -188,7 +193,7 @@ export default class RosterPlayerPage extends Page {
     );
   }
 
-  sections(profile: Record<string, any>) {
+  sections(profile: Partial<Profile>) {
     return [
       profile.about ? this.about(profile.about) : null,
       profile.videos && profile.videos.length ? this.videos(profile.videos) : null,
@@ -197,7 +202,7 @@ export default class RosterPlayerPage extends Page {
             t('career'),
             profile.stats.labels,
             profile.stats.names,
-            profile.stats.rows.map((r: any) => [r.label, ...r.values])
+            profile.stats.rows.map((r) => [r.label, ...r.values])
           )
         : null,
       profile.games ? this.recentGames(profile.games) : null,
@@ -205,7 +210,7 @@ export default class RosterPlayerPage extends Page {
     ];
   }
 
-  about(about: any) {
+  about(about: About) {
     return (
       <section className="RosterPlayer-section RosterPlayer-about">
         <h2>{t('about')}</h2>
@@ -226,12 +231,12 @@ export default class RosterPlayerPage extends Page {
    * on one page is eight heavyweight embeds loading before anyone has chosen a
    * clip; a thumbnail costs one image.
    */
-  videos(videos: any[]) {
+  videos(videos: Video[]) {
     return (
       <section className="RosterPlayer-section">
         <h2>{t('highlights')}</h2>
         <div className="RosterPlayer-videos">
-          {videos.map((v: any) => (
+          {videos.map((v) => (
             <figure className="RosterVideo" key={v.id}>
               {this.playing === v.id ? (
                 <div className="RosterVideo-frame">
@@ -274,8 +279,8 @@ export default class RosterPlayerPage extends Page {
     );
   }
 
-  recentGames(games: any) {
-    const rows = games.rows.map((g: any) => [
+  recentGames(games: GamesTable) {
+    const rows = games.rows.map((g) => [
       <span className="RosterGame">
         {g.opponentLogo ? <img src={crestUrl(g.opponentLogo, 20)} alt="" loading="lazy" decoding="async" /> : null}
         {g.atVs} {g.opponent}
@@ -289,7 +294,7 @@ export default class RosterPlayerPage extends Page {
     return this.table(t('recent_games'), games.labels, games.names, rows);
   }
 
-  table(title: Mithril.Children, labels: string[], names: string[], rows: any[][]) {
+  table(title: Mithril.Children, labels: string[], names: string[], rows: Mithril.Children[][]) {
     return (
       <section className="RosterPlayer-section">
         <h2>{title}</h2>
@@ -316,12 +321,12 @@ export default class RosterPlayerPage extends Page {
     );
   }
 
-  news(news: any[]) {
+  news(news: NewsItem[]) {
     return (
       <section className="RosterPlayer-section">
         <h2>{t('news')}</h2>
         <ul className="RosterPlayer-news">
-          {news.map((n: any) => (
+          {news.map((n) => (
             <li>
               <a href={n.url} target="_blank" rel="noopener noreferrer">
                 {n.image ? <img src={n.image} alt="" loading="lazy" /> : null}
@@ -339,7 +344,7 @@ export default class RosterPlayerPage extends Page {
   }
 }
 
-function fact(label: any, value: any) {
+function fact(label: Mithril.Children, value: string | number | null | undefined) {
   if (value === null || value === undefined || value === '') return null;
   // One cell per fact: a grid lays a bare dt and dd out as two separate cells,
   // and the labels drift away from their values.

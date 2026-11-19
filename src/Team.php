@@ -25,11 +25,6 @@ class Team extends AbstractModel
 
     protected $table = 'roster_teams';
 
-    protected $fillable = [
-        'league', 'name', 'slug', 'mascot', 'abbreviation', 'conference',
-        'color', 'logo', 'logo_dark', 'external_id', 'roster_at',
-    ];
-
     protected $casts = [
         'roster_at' => 'datetime',
     ];

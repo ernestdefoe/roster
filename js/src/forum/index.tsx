@@ -2,6 +2,8 @@ import app from 'flarum/forum/app';
 import { extend } from 'flarum/common/extend';
 import IndexSidebar from 'flarum/forum/components/IndexSidebar';
 import LinkButton from 'flarum/common/components/LinkButton';
+import type ItemList from 'flarum/common/utils/ItemList';
+import type Mithril from 'mithril';
 
 import registerBlocks from './blocks';
 
@@ -17,7 +19,7 @@ app.initializers.add('ernestdefoe-roster', () => {
    * simply attached to a `navItems` nobody calls. The link was built, styled
    * and translated, and the only route to the roster was typing the URL.
    */
-  extend(IndexSidebar.prototype, 'navItems', function (items: any) {
+  extend(IndexSidebar.prototype, 'navItems', function (items: ItemList<Mithril.Children>) {
     items.add(
       'roster',
       <LinkButton href={app.route('roster.index')} icon="fas fa-users">
