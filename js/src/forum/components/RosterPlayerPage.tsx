@@ -402,9 +402,8 @@ function formatDate(iso: string) {
     const d = new Date(iso.slice(0, 10) + 'T12:00:00Z');
     return `${d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · ${t('time_tba')}`;
   }
-  try {
-    return new Date(iso).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-  } catch (e) {
-    return iso;
-  }
+  const date = new Date(iso);
+  if (isNaN(date.getTime())) return iso;
+
+  return date.toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }

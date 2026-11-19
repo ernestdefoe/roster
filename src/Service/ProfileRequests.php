@@ -44,13 +44,22 @@ class ProfileRequests
             return ['pending' => false];
         }
 
-        if (! $this->profile->isCached($player) && $this->mayBuild($player, $ip)) {
-            $this->queue->push(new BuildPlayerProfile((int) $player->id));
+        $throttled = false;
+
+        if (! $this->profile->isCached($player)) {
+            if ($this->mayBuild($player, $ip)) {
+                $this->queue->push(new BuildPlayerProfile((int) $player->id));
+            } else {
+                // Over budget (or already queued): the page says it is coming
+                // and asks again, rather than claiming there is nothing.
+                $throttled = true;
+            }
         }
 
         // Read after the push: on the sync queue the build has already run.
         $profile = $this->profile->for($player, $player->team, false);
-        $profile['pending'] = ! $this->profile->isCached($player) && $this->cache->has($this->pendingKey((int) $player->id));
+        $profile['pending'] = ! $this->profile->isCached($player)
+            && ($throttled || $this->cache->has($this->pendingKey((int) $player->id)));
 
         return $profile;
     }

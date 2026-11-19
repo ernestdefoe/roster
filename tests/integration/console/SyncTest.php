@@ -127,6 +127,8 @@ class SyncTest extends TestCase
 
         $db = $this->database();
         $db->table('roster_teams')->update(['roster_at' => null]);
+        // A day later: the club list is due again.
+        $this->app()->getContainer()->make(\Illuminate\Contracts\Cache\Repository::class)->forget('ernestdefoe-roster.clubs-fetched.nfl');
         $this->espn([
             '/football/nfl/teams' => ['sports' => [['leagues' => [['teams' => [$this->team('3', 'Chicago Bears')]]]]]],
             '/football/nfl/standings' => $standings,
@@ -156,6 +158,30 @@ class SyncTest extends TestCase
 
         $this->assertSame(['nfl'], $this->database()->table('roster_teams')->pluck('league')->all(), 'Only NFL is followed');
         $this->assertSame(0, $this->database()->table('roster_players')->count());
+    }
+
+    #[Test]
+    public function a_leagues_club_list_is_fetched_once_a_day_and_again_after_a_failure()
+    {
+        $asked = 0;
+        $this->espn(function (RequestInterface $request) use (&$asked) {
+            if (str_ends_with($request->getUri()->getPath(), '/football/nfl/teams')) {
+                $asked++;
+            }
+
+            return Create::promiseFor(new Response(503));
+        });
+
+        $this->sync();
+        $this->sync();
+        $this->assertSame(2, $asked, 'A failed club list is asked for again on the next run');
+
+        $this->espn([
+            '/football/nfl/teams' => ['sports' => [['leagues' => [['teams' => [$this->team('3', 'Chicago Bears')]]]]]],
+            '/football/nfl/standings' => ['children' => [['name' => 'NFC North', 'standings' => ['entries' => [['team' => ['id' => '3']]]]]]],
+        ]);
+        $this->assertSame(1, $this->sync()['teams']);
+        $this->assertSame(0, $this->sync()['teams'], 'Fresh for a day');
     }
 
     #[Test]

@@ -48,7 +48,15 @@ class JsonFetcher
             return null;
         }
 
-        if ($response->getStatusCode() !== 200) {
+        $status = $response->getStatusCode();
+
+        if ($status !== 200) {
+            // A 404 is an ordinary answer (no such athlete, a roster ESPN could
+            // not assemble); anything else, a block or an outage, is worth seeing.
+            if ($status !== 404) {
+                $this->log->warning('[roster] '.$url.' answered '.$status);
+            }
+
             return null;
         }
 

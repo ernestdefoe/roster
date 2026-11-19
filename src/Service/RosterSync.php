@@ -7,6 +7,7 @@ use ErnestDefoe\Roster\Service\Leagues\League;
 use ErnestDefoe\Roster\Service\Leagues\Leagues;
 use ErnestDefoe\Roster\Service\Sources\EspnRoster;
 use ErnestDefoe\Roster\Team;
+use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
@@ -28,13 +29,24 @@ class RosterSync
      */
     public const ROSTERS_PER_RUN = 12;
 
-    /** How long a club's roster is fresh enough to skip. */
+    /** How long a club's roster, and a league's club list, is fresh enough to skip. */
     public const REFRESH_HOURS = 24;
+
+    /**
+     * A run stops starting new fetches after this long. Every call has its own
+     * timeout, but twelve slow ones in a row would still hold the scheduler
+     * for minutes; whatever is left is first in line next hour.
+     */
+    public const MAX_SECONDS = 300;
+
+    /** When this run gives up starting new fetches (a Unix time). */
+    private int $deadline = 0;
 
     public function __construct(
         protected EspnRoster $espn,
         protected Leagues $leagues,
         protected HeldLeagues $held,
+        protected Cache $cache,
     ) {
     }
 
@@ -43,7 +55,8 @@ class RosterSync
     {
         $following = $this->held->following();
 
-        // An unticked league's clubs leave with it: not fetched, not served.
+        // An unticked league's clubs leave with it: never fetched again, and
+        // gone from the pages once this run has removed them.
         $this->removeClubs(Team::query()->whereNotIn('league', $following)->pluck('id')->all());
 
         if ($following === []) {
@@ -51,6 +64,7 @@ class RosterSync
         }
 
         $summary = ['leagues' => 0, 'teams' => 0, 'rosters' => 0, 'players' => 0];
+        $this->deadline = Carbon::now()->getTimestamp() + self::MAX_SECONDS;
 
         foreach ($following as $key) {
             $league = $this->leagues->get($key);
@@ -60,7 +74,7 @@ class RosterSync
             }
 
             $summary['leagues']++;
-            $summary['teams'] += $this->teams($league);
+            $summary['teams'] += $this->clubsDue($league) ? $this->teams($league) : 0;
         }
 
         // The index's league switcher reads this; a newly followed league joins it.
@@ -95,10 +109,13 @@ class RosterSync
 
     protected function teams(League $league): int
     {
-        // Empty when ESPN failed to answer: the league keeps what it has.
+        // Empty when ESPN failed to answer: the league keeps what it has, and
+        // its club list is asked for again on the next run.
         $clubs = $this->espn->teams($league);
 
         if ($clubs === []) {
+            $this->cache->forget($this->clubsKey($league));
+
             return 0;
         }
 
@@ -165,13 +182,13 @@ class RosterSync
     /** @return array{0: int, 1: int} */
     protected function rosters(): array
     {
-        $fetched = 0;
+        $fetched = [];
         $players = 0;
 
         foreach ($this->due() as $team) {
             $league = $this->leagues->get($team->league);
 
-            if (! $this->espn->supports($league)) {
+            if (! $this->espn->supports($league) || $this->outOfTime()) {
                 continue;
             }
 
@@ -185,17 +202,18 @@ class RosterSync
              * the stamp that club is retried first on every run for ever, and
              * no other club is ever reached.
              */
-            $team->roster_at = Carbon::now();
-            $team->save();
-
-            $fetched++;
+            $fetched[] = (int) $team->id;
 
             if ($roster !== []) {
                 $players += $this->players($league, $team, $roster);
             }
         }
 
-        return [$fetched, $players];
+        if ($fetched !== []) {
+            Team::query()->whereIn('id', $fetched)->update(['roster_at' => Carbon::now()]);
+        }
+
+        return [count($fetched), $players];
     }
 
     /**
@@ -289,6 +307,27 @@ class RosterSync
     }
 
     /* --------------------------------------------------------------- naming */
+
+    /**
+     * Whether a league's club list is due: once a day, and straight away for a
+     * league just followed. Clubs change a few times a season; the standings
+     * and up to four pages of clubs are not worth asking for every hour.
+     */
+    protected function clubsDue(League $league): bool
+    {
+        return ! $this->outOfTime()
+            && $this->cache->add($this->clubsKey($league), 1, self::REFRESH_HOURS * 3600);
+    }
+
+    private function clubsKey(League $league): string
+    {
+        return 'ernestdefoe-roster.clubs-fetched.'.$league->key;
+    }
+
+    protected function outOfTime(): bool
+    {
+        return Carbon::now()->getTimestamp() >= $this->deadline;
+    }
 
     /** A feed URL that fits its 255-character column; one that does not is no URL at all. */
     protected function url(mixed $value): string
