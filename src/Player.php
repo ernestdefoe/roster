@@ -44,6 +44,14 @@ class Player extends AbstractModel
         'specialists' => ['K', 'P', 'LS', 'PK', 'ATH'],
     ];
 
+    /** ESPN's own names for the gridiron units, as the keys the locale file translates. */
+    private const GRIDIRON_GROUPS = [
+        'offense' => 'offense',
+        'defense' => 'defense',
+        'special team' => 'specialists',
+        'special teams' => 'specialists',
+    ];
+
     public $timestamps = true;
 
     protected $table = 'roster_players';
@@ -75,21 +83,29 @@ class Player extends AbstractModel
         return $inches > 0 ? intdiv($inches, 12).'-'.($inches % 12) : null;
     }
 
-    /** The hometown, or null when neither half is known. */
+    /**
+     * The hometown: city and state, or city and country where there is no
+     * state (most of soccer); null when none of it is known.
+     */
     public function getHometownAttribute(): ?string
     {
-        $parts = array_filter([trim((string) $this->home_city), trim((string) $this->home_state)]);
+        $region = trim((string) $this->home_state) ?: trim((string) $this->home_country);
+        $parts = array_filter([trim((string) $this->home_city), $region]);
 
         return $parts === [] ? null : implode(', ', $parts);
     }
 
-    /** The group the provider gave, or the gridiron unit his position belongs to. */
+    /**
+     * The group the provider gave, or the gridiron unit his position belongs to.
+     * A gridiron unit comes back as its locale key (`offense`, `specialists`);
+     * every other sport's group is returned as the provider wrote it.
+     */
     public function getGroupAttribute(): string
     {
         $group = trim((string) $this->position_group);
 
         if ($group !== '') {
-            return $group;
+            return self::GRIDIRON_GROUPS[mb_strtolower($group)] ?? $group;
         }
 
         $position = strtoupper(trim((string) $this->position));

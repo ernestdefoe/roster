@@ -48,7 +48,7 @@ What ESPN and Wikipedia return is cached for six hours per player (a week for Wi
 specialists is a fact about gridiron; ESPN answers Pitchers and Catchers,
 Centers and Wingers. Mapping a shortstop through a list of football positions
 returns "other" for every player on the team, so the group is stored as it was
-given and only gridiron's four are translated.
+given and only gridiron's units (offense, defense, specialists) are translated.
 
 🚨 **A professional club has no class column.** There is no such thing as a
 sophomore in the NBA, and an empty column under a heading that means nothing in

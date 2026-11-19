@@ -16,8 +16,8 @@ export default class RosterTeamPage extends Page {
   team: Team | null = null;
   groups: Group[] = [];
 
-  /* The four gridiron groups are ours to name; every other group name came
-     from the provider and is printed exactly as it was given. */
+  /* The four gridiron groups arrive as locale keys and are ours to name; every
+     other group name came from the provider and is printed as it was given. */
   static readonly LABELS: Record<string, string> = {
     offense: 'ernestdefoe-roster.forum.group.offense',
     defense: 'ernestdefoe-roster.forum.group.defense',

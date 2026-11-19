@@ -53,6 +53,10 @@ class PlayerResource extends AbstractDatabaseResource
     {
         return [
             Schema\Str::make('name'),
+            Schema\Str::make('firstName')->nullable()
+                ->get(fn (Player $player) => $player->first_name),
+            Schema\Str::make('lastName')->nullable()
+                ->get(fn (Player $player) => $player->last_name),
             Schema\Str::make('slug'),
             Schema\Str::make('position')->nullable(),
             Schema\Str::make('positionGroup')
@@ -62,6 +66,8 @@ class PlayerResource extends AbstractDatabaseResource
                 ->get(fn (Player $player) => $player->height_label),
             Schema\Integer::make('weight')->nullable(),
             Schema\Str::make('hometown')->nullable(),
+            // Where a professional played his college football or basketball.
+            Schema\Str::make('college')->nullable(),
             Schema\Integer::make('classYear')->nullable()
                 ->get(fn (Player $player) => $player->class_year),
             Schema\Str::make('photo')->nullable()

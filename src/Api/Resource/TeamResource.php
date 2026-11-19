@@ -65,6 +65,7 @@ class TeamResource extends AbstractDatabaseResource
             Schema\Str::make('name'),
             Schema\Str::make('slug'),
             Schema\Str::make('mascot')->nullable(),
+            Schema\Str::make('abbreviation')->nullable(),
             Schema\Str::make('conference'),
             Schema\Str::make('group')
                 ->get(fn (Team $team) => $this->group($team)),

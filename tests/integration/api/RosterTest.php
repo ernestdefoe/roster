@@ -37,6 +37,8 @@ class RosterTest extends TestCase
                 ['id' => 2, 'team_id' => 1, 'league' => 'cfb', 'name' => 'Ryan Williams', 'slug' => 'ryan-williams', 'position' => 'WR', 'jersey' => 20, 'external_id' => '5079424'],
                 ['id' => 3, 'team_id' => 1, 'league' => 'cfb', 'name' => 'Walk On', 'slug' => 'walk-on', 'position' => 'LS', 'jersey' => null],
                 ['id' => 4, 'team_id' => 1, 'league' => 'cfb', 'name' => 'Deontae Lawson', 'slug' => 'deontae-lawson', 'position' => 'LB', 'jersey' => 0],
+                ['id' => 5, 'team_id' => 1, 'league' => 'cfb', 'name' => 'Espn Snapper', 'slug' => 'espn-snapper', 'position' => 'LS', 'position_group' => 'Special Team', 'jersey' => 99],
+                ['id' => 6, 'team_id' => 1, 'league' => 'cfb', 'name' => 'Espn Pitcher', 'slug' => 'espn-pitcher', 'position' => 'P', 'position_group' => 'Pitchers', 'jersey' => 98, 'home_city' => 'Lagos', 'home_country' => 'Nigeria'],
             ],
         ]);
     }
@@ -143,6 +145,9 @@ class RosterTest extends TestCase
 
         $players = $this->included($body, 'roster-players');
         $this->assertSame('offense', $players['ty-simpson']['positionGroup']);
+        $this->assertSame('specialists', $players['espn-snapper']['positionGroup'], "ESPN's own unit name, as the key the locale translates");
+        $this->assertSame('Pitchers', $players['espn-pitcher']['positionGroup'], 'Any other sport keeps its own group');
+        $this->assertSame('Lagos, Nigeria', $players['espn-pitcher']['hometown'], 'No state: the country stands in');
         $this->assertSame('defense', $players['deontae-lawson']['positionGroup']);
         $this->assertSame('specialists', $players['walk-on']['positionGroup']);
         $this->assertSame('6-2', $players['ty-simpson']['height']);

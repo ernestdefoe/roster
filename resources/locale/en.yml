@@ -37,6 +37,7 @@ ernestdefoe-roster:
       weight: Weight
       class: Class
       hometown: Hometown
+      college: College
       age: Age
       status: Status
       next_game: "Next game:"

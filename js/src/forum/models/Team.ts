@@ -6,6 +6,7 @@ export default class Team extends Model {
   name = Model.attribute<string>('name');
   slug = Model.attribute<string>('slug');
   mascot = Model.attribute<string | null>('mascot');
+  abbreviation = Model.attribute<string | null>('abbreviation');
   conference = Model.attribute<string>('conference');
   /** The heading the index files it under: its conference, or a stand-in when it has none. */
   group = Model.attribute<string>('group');

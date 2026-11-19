@@ -167,6 +167,8 @@ export default class RosterPlayerPage extends Page {
           {fact(t('weight'), bio.weight || (weight ? `${weight} lbs` : null))}
           {fact(t('class'), bio.experience)}
           {fact(t('hometown'), bio.birthPlace || player.hometown())}
+          {/* A professional's college; a college player's would only name his own school. */}
+          {(player.team() || null)?.collegiate() ? null : fact(t('college'), player.college())}
           {fact(t('age'), bio.age)}
           {fact(t('status'), bio.status)}
         </dl>
