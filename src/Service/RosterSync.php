@@ -45,6 +45,9 @@ class RosterSync
     {
         $following = $this->held->following();
 
+        // An unticked league's clubs leave with it: not fetched, not served.
+        $this->removeClubs(Team::query()->whereNotIn('league', $following)->pluck('id')->all());
+
         if ($following === []) {
             return ['skipped' => 'no leagues'];
         }
@@ -112,14 +115,26 @@ class RosterSync
 
         // A club the league no longer lists (relegated, or out of the
         // division) leaves it, with its roster.
-        $gone = Team::query()->where('league', $league->key)->whereNotIn('external_id', array_map('strval', array_keys($rows)))->pluck('id')->all();
-
-        if ($gone !== []) {
-            Player::query()->whereIn('team_id', $gone)->delete();
-            Team::query()->whereIn('id', $gone)->delete();
-        }
+        $this->removeClubs(
+            Team::query()->where('league', $league->key)->whereNotIn('external_id', array_map('strval', array_keys($rows)))->pluck('id')->all()
+        );
 
         return count($rows);
+    }
+
+    /** @param list<int> $ids clubs to remove, with their rosters */
+    protected function removeClubs(array $ids): void
+    {
+        if ($ids === []) {
+            return;
+        }
+
+        Team::query()->getConnection()->transaction(function () use ($ids) {
+            Player::query()->whereIn('team_id', $ids)->delete();
+            Team::query()->whereIn('id', $ids)->delete();
+        });
+
+        $this->held->forget();
     }
 
     /**
@@ -136,8 +151,8 @@ class RosterSync
             'abbreviation' => Str::limit((string) $club['abbreviation'], 15, ''),
             'conference' => Str::limit((string) $club['conference'], 99, ''),
             'color' => Str::limit((string) $club['color'], 15, ''),
-            'logo' => (string) $club['logo'],
-            'logo_dark' => (string) $club['logo_dark'],
+            'logo' => $this->url($club['logo']),
+            'logo_dark' => $this->url($club['logo_dark']),
             /*
              * 🚨 The slug carries the league. Two leagues can hold a club of
              * the same name, `slug` is unique across the table, and the loser
@@ -271,11 +286,19 @@ class RosterSync
             // 🚨 Written at all only since 1.3: until then every college roster's Class column was empty.
             'class_year' => $row['class_year'],
             'college' => Str::limit((string) $row['college'], 119, ''),
-            'photo_url' => (string) $row['headshot'],
+            'photo_url' => $this->url($row['headshot']),
         ];
     }
 
     /* --------------------------------------------------------------- naming */
+
+    /** A feed URL that fits its 255-character column; one that does not is no URL at all. */
+    protected function url(mixed $value): string
+    {
+        $value = (string) $value;
+
+        return strlen($value) <= 255 ? $value : '';
+    }
 
     protected function slug(League $league, string $value): string
     {

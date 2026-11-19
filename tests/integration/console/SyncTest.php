@@ -139,6 +139,26 @@ class SyncTest extends TestCase
     }
 
     #[Test]
+    public function an_unticked_leagues_clubs_leave_with_it()
+    {
+        $this->prepareDatabase([
+            'roster_teams' => [
+                ['id' => 1, 'league' => 'cfb', 'name' => 'Alabama', 'slug' => 'cfb-alabama', 'external_id' => '333'],
+                ['id' => 2, 'league' => 'nfl', 'name' => 'Bears', 'slug' => 'nfl-bears', 'external_id' => '3', 'roster_at' => date('Y-m-d H:i:s')],
+            ],
+            'roster_players' => [
+                ['id' => 1, 'team_id' => 1, 'league' => 'cfb', 'name' => 'Ty Simpson', 'slug' => 'cfb-ty-simpson-1', 'external_id' => '1'],
+            ],
+        ]);
+        $this->espn([]);
+
+        $this->sync();
+
+        $this->assertSame(['nfl'], $this->database()->table('roster_teams')->pluck('league')->all(), 'Only NFL is followed');
+        $this->assertSame(0, $this->database()->table('roster_players')->count());
+    }
+
+    #[Test]
     public function never_fetched_clubs_come_before_stale_ones()
     {
         $this->prepareDatabase([

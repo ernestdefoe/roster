@@ -36,9 +36,6 @@ class EspnRoster
      */
     private const MAX_TEAM_PAGES = 4;
 
-    /** @var array<string, array<string, string>> league key => id => division */
-    private array $divisionCache = [];
-
     public function __construct(protected JsonFetcher $fetcher)
     {
     }
@@ -201,30 +198,12 @@ class EspnRoster
      *
      * @return array<string, string>|null ESPN team id => division name; null when the call failed
      */
-    public function divisions(League $league): ?array
+    private function divisions(League $league): ?array
     {
-        if (! $this->supports($league)) {
-            return [];
-        }
-
-        /*
-         * Memoised: the club list now asks for this to scope itself, and the
-         * sync asks again to label each club. One standings call per league per
-         * run, not two identical ones.
-         */
-        if (isset($this->divisionCache[$league->key])) {
-            return $this->divisionCache[$league->key];
-        }
-
         // `level=3` is conference → division → team. Levels 1 and 2 stop short.
         $body = $this->get($league->espnPath.'/standings', ['level' => '3'], 'https://site.api.espn.com/apis/v2/sports');
 
-        if ($body === null) {
-            // Not cached: a failed call is worth retrying, unlike an empty answer.
-            return null;
-        }
-
-        return $this->divisionCache[$league->key] = $this->divisionMap($body);
+        return $body === null ? null : $this->divisionMap($body);
     }
 
     /**

@@ -199,6 +199,21 @@ class RosterTest extends TestCase
     }
 
     #[Test]
+    public function while_espn_is_down_the_last_good_profile_is_served()
+    {
+        $this->offline();
+
+        $key = 'ernestdefoe-roster.profile.espn.'.md5('football/college-football|4870895');
+        $cache = $this->app()->getContainer()->make(\Illuminate\Contracts\Cache\Repository::class);
+        $cache->put($key.'.stale', ['bio' => ['status' => 'Active']], 3600);
+
+        [, $body] = $this->json('/api/roster-players/ty-simpson');
+
+        $this->assertSame(['status' => 'Active'], $body['data']['attributes']['profile']['bio']);
+        $this->assertSame(['bio' => ['status' => 'Active']], $cache->get($key), 'The good copy stands in, briefly');
+    }
+
+    #[Test]
     public function with_a_queue_worker_the_page_asks_nobody_and_says_the_profile_is_coming()
     {
         $this->offline();

@@ -71,7 +71,7 @@ function crest(team: any, duplicate: boolean, dark: boolean) {
   return m(
     'a.RosterCrests-crest',
     {
-      href: app.forum.attribute('baseUrl') + '/roster/' + team.slug,
+      href: app.route('roster.team', { slug: team.slug }),
       title: duplicate ? undefined : team.name,
       'aria-hidden': duplicate ? 'true' : undefined,
       tabindex: duplicate ? '-1' : undefined,

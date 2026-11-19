@@ -138,9 +138,13 @@ class PlayerProfile
         $overview = $this->json($base.'/overview');
 
         if ($athlete === null && $overview === null) {
-            $this->cache->put($key, [], self::TTL_FAILED);
+            // ESPN is down: the last good copy stands in for a short while,
+            // so the page keeps what it had and the build is retried soon.
+            $stale = $this->cache->get($key.'.stale');
+            $fallback = is_array($stale) ? $stale : [];
+            $this->cache->put($key, $fallback, self::TTL_FAILED);
 
-            return [];
+            return $fallback;
         }
 
         $out = [
@@ -370,18 +374,20 @@ class PlayerProfile
 
         // 🚨 A miss is cached as well — as false, so has() still sees it. Most
         // players have no article, and asking again on every view would make
-        // Wikipedia the busiest thing a roster page does.
-        $this->cache->put($key, $result ?? false, self::WIKI_TTL);
+        // Wikipedia the busiest thing a roster page does. A search that FAILED
+        // is not a miss, and is asked again soon.
+        $this->cache->put($key, $result ?? false, $result === null ? self::TTL_FAILED : self::WIKI_TTL);
 
-        return $result;
+        return $result ?: null;
     }
 
-    private function findWikipedia(string $name, Team $team): ?array
+    /** @return array<string, mixed>|false|null his summary; false when he has none; null when Wikipedia did not answer */
+    private function findWikipedia(string $name, Team $team): array|false|null
     {
         $school = trim((string) $team->name);
         $sport = $this->leagues->get($team->league)->sport;
         if ($name === '' || $school === '' || $sport === '') {
-            return null;
+            return false;
         }
 
         $search = $this->json(self::WIKI.'/w/api.php', [
@@ -391,6 +397,10 @@ class PlayerProfile
             'srlimit' => 4,
             'format' => 'json',
         ]);
+
+        if ($search === null) {
+            return null;
+        }
 
         foreach ($search['query']['search'] ?? [] as $hit) {
             $title = (string) ($hit['title'] ?? '');
@@ -419,7 +429,7 @@ class PlayerProfile
             ];
         }
 
-        return null;
+        return false;
     }
 
     /**

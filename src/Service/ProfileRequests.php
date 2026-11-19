@@ -50,25 +50,25 @@ class ProfileRequests
 
         // Read after the push: on the sync queue the build has already run.
         $profile = $this->profile->for($player, $player->team, false);
-        $profile['pending'] = ! $this->profile->isCached($player) && $this->cache->has($this->pendingKey($player));
+        $profile['pending'] = ! $this->profile->isCached($player) && $this->cache->has($this->pendingKey((int) $player->id));
 
         return $profile;
     }
 
     public function built(int $playerId): void
     {
-        $this->cache->forget('ernestdefoe-roster.profile.pending.'.$playerId);
+        $this->cache->forget($this->pendingKey($playerId));
     }
 
-    private function pendingKey(Player $player): string
+    private function pendingKey(int $playerId): string
     {
-        return 'ernestdefoe-roster.profile.pending.'.$player->id;
+        return 'ernestdefoe-roster.profile.pending.'.$playerId;
     }
 
     /** Spend one build from this visitor's budget and the site's, unless one is already queued. */
     private function mayBuild(Player $player, string $ip): bool
     {
-        if ($this->cache->has($this->pendingKey($player))) {
+        if ($this->cache->has($this->pendingKey((int) $player->id))) {
             return false;
         }
 
@@ -76,7 +76,7 @@ class ProfileRequests
 
         return $this->spend('ernestdefoe-roster.builds.ip.'.sha1($ip).'.'.$minute, self::BUILDS_PER_IP_PER_MINUTE)
             && $this->spend('ernestdefoe-roster.builds.all.'.$minute, self::BUILDS_PER_MINUTE)
-            && $this->cache->add($this->pendingKey($player), 1, self::PENDING_TTL);
+            && $this->cache->add($this->pendingKey((int) $player->id), 1, self::PENDING_TTL);
     }
 
     private function spend(string $key, int $limit): bool

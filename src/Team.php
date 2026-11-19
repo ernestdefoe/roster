@@ -16,7 +16,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $color
  * @property string|null $logo
  * @property string|null $logo_dark
- * @property int|null    $cfbd_id
  * @property string|null $external_id
  * @property \Carbon\Carbon|null $roster_at
  */
@@ -28,11 +27,10 @@ class Team extends AbstractModel
 
     protected $fillable = [
         'league', 'name', 'slug', 'mascot', 'abbreviation', 'conference',
-        'color', 'logo', 'logo_dark', 'cfbd_id', 'external_id', 'roster_at',
+        'color', 'logo', 'logo_dark', 'external_id', 'roster_at',
     ];
 
     protected $casts = [
-        'cfbd_id' => 'integer',
         'roster_at' => 'datetime',
     ];
 

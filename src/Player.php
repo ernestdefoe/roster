@@ -24,7 +24,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null    $class_year
  * @property string|null $college
  * @property string|null $photo_url
- * @property int|null    $cfbd_id
  * @property string|null $external_id
  * @property-read string|null $height_label
  * @property-read string|null $hometown
@@ -53,7 +52,7 @@ class Player extends AbstractModel
         'team_id', 'league', 'name', 'slug', 'first_name', 'last_name',
         'position', 'position_group', 'jersey', 'height', 'weight',
         'home_city', 'home_state', 'home_country', 'class_year',
-        'college', 'photo_url', 'cfbd_id', 'external_id',
+        'college', 'photo_url', 'external_id',
     ];
 
     protected $casts = [
@@ -61,7 +60,6 @@ class Player extends AbstractModel
         'height' => 'integer',
         'weight' => 'integer',
         'class_year' => 'integer',
-        'cfbd_id' => 'integer',
     ];
 
     /** @return BelongsTo<Team, $this> */
