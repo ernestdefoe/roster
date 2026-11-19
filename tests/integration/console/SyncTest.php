@@ -185,6 +185,25 @@ class SyncTest extends TestCase
     }
 
     #[Test]
+    public function a_league_ticked_again_is_fetched_on_the_next_run()
+    {
+        $this->espn([
+            '/football/nfl/teams' => ['sports' => [['leagues' => [['teams' => [$this->team('3', 'Chicago Bears')]]]]]],
+            '/football/nfl/standings' => ['children' => [['name' => 'NFC North', 'standings' => ['entries' => [['team' => ['id' => '3']]]]]]],
+        ]);
+        $settings = $this->app()->getContainer()->make(\Flarum\Settings\SettingsRepositoryInterface::class);
+
+        $this->assertSame(1, $this->sync()['teams']);
+
+        $settings->set('ernestdefoe-roster.leagues', 'cfb');
+        $this->sync();
+        $this->assertSame(0, $this->database()->table('roster_teams')->where('league', 'nfl')->count());
+
+        $settings->set('ernestdefoe-roster.leagues', 'nfl');
+        $this->assertSame(1, $this->sync()['teams']);
+    }
+
+    #[Test]
     public function never_fetched_clubs_come_before_stale_ones()
     {
         $this->prepareDatabase([

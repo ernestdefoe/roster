@@ -338,8 +338,7 @@ class EspnRoster
      * One athlete, shaped for the sync.
      *
      * 🚨 Everything measured is nullable on purpose. ESPN omits a jersey for an
-     * unsigned player, a height for most of soccer, and an age for anybody
-     * whose birthday it does not hold — and a zero stored for a missing
+     * unsigned player and a height for most of soccer — and a zero stored for a missing
      * measurement is a page that says a player is 0in tall. The JERSEY is the
      * exception and has its own guard: see jersey(), where 0 is a number
      * somebody actually wears.

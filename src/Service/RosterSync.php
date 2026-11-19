@@ -56,8 +56,13 @@ class RosterSync
         $following = $this->held->following();
 
         // An unticked league's clubs leave with it: never fetched again, and
-        // gone from the pages once this run has removed them.
+        // gone from the pages once this run has removed them. Ticked again, it
+        // is fetched on the next run rather than a day later.
         $this->removeClubs(Team::query()->whereNotIn('league', $following)->pluck('id')->all());
+
+        foreach (array_diff(array_keys($this->leagues->all()), $following) as $key) {
+            $this->cache->forget($this->clubsKey($this->leagues->get($key)));
+        }
 
         if ($following === []) {
             return ['skipped' => 'no leagues'];
@@ -306,7 +311,7 @@ class RosterSync
         ];
     }
 
-    /* --------------------------------------------------------------- naming */
+    /* -------------------------------------------------------------- helpers */
 
     /**
      * Whether a league's club list is due: once a day, and straight away for a
