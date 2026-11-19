@@ -1,8 +1,6 @@
 import Extend from 'flarum/common/extenders';
 import LeaguePicker from './components/LeaguePicker';
 
-declare const m: any;
-
 /**
  * Declarative admin registration — the Flarum 2 way.
  *

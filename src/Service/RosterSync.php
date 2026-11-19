@@ -37,7 +37,8 @@ class RosterSync
     public function __construct(
         protected EspnRoster $espn,
         protected SettingsRepositoryInterface $settings,
-        protected Leagues $leagues = new Leagues()
+        protected Leagues $leagues,
+        protected HeldLeagues $held,
     ) {
     }
 
@@ -63,6 +64,9 @@ class RosterSync
             $summary['teams'] += $this->teams($league);
         }
 
+        // The index's league switcher reads this; a newly followed league joins it.
+        $this->held->forget();
+
         /*
          * 🚨 Rosters are fetched ACROSS leagues in one ordered pass, oldest
          * first, rather than league by league. Per league, a site following
@@ -79,6 +83,17 @@ class RosterSync
 
     /* ---------------------------------------------------------------- clubs */
 
+    /**
+     * 🚨 `slug` is written on insert and never updated: it is in URLs people
+     * have shared.
+     */
+    private const TEAM_UPDATES = ['name', 'mascot', 'abbreviation', 'conference', 'color', 'logo', 'logo_dark', 'updated_at'];
+
+    private const PLAYER_UPDATES = [
+        'team_id', 'name', 'first_name', 'last_name', 'position', 'position_group', 'jersey', 'height', 'weight',
+        'home_city', 'home_state', 'home_country', 'class_year', 'college', 'photo_url', 'updated_at',
+    ];
+
     protected function teams(League $league): int
     {
         $clubs = $this->espn->teams($league);
@@ -88,49 +103,42 @@ class RosterSync
         }
 
         $divisions = $this->espn->divisions($league);
-        $written = 0;
-
-        // One query for the league's clubs rather than one per club: this runs
-        // every hour for every league the site follows.
-        $known = $this->known(Team::class, $league, array_column($clubs, 'external_id'));
+        $rows = [];
 
         foreach ($clubs as $club) {
-            $existing = $known[(string) $club['external_id']] ?? null;
-
-            $values = [
-                'name' => Str::limit((string) $club['school'], 189, ''),
-                'mascot' => Str::limit((string) $club['mascot'], 119, ''),
-                'abbreviation' => Str::limit((string) $club['abbreviation'], 15, ''),
-                'conference' => $divisions[$club['external_id']] ?? '',
-                'color' => Str::limit((string) $club['color'], 15, ''),
-                'logo' => (string) $club['logo'],
-                'logo_dark' => (string) $club['logo_dark'],
-            ];
-
-            if ($existing !== null) {
-                // 🚨 `slug` is never updated. It is in URLs people have shared.
-                $existing->fill($values)->save();
-                $written++;
-
-                continue;
-            }
-
-            $known[(string) $club['external_id']] = Team::query()->create($values + [
-                'league' => $league->key,
-                'external_id' => $club['external_id'],
-                /*
-                 * 🚨 The slug carries the league. Two leagues can hold a club
-                 * of the same name, `slug` is unique across the table, and the
-                 * loser of that collision would silently become the winner's
-                 * page.
-                 */
-                'slug' => $this->slug($league, (string) ($club['slug'] ?: $club['school'])),
-            ]);
-
-            $written++;
+            $rows[(string) $club['external_id']] = $this->clubValues($league, $club, $divisions);
         }
 
-        return $written;
+        // One statement for the whole league, keyed on the provider's id.
+        Team::query()->upsert(array_values($rows), ['league', 'external_id'], self::TEAM_UPDATES);
+
+        return count($rows);
+    }
+
+    /**
+     * @param array<string, mixed> $club
+     * @param array<string, string> $divisions
+     * @return array<string, mixed>
+     */
+    protected function clubValues(League $league, array $club, array $divisions): array
+    {
+        return [
+            'league' => $league->key,
+            'external_id' => (string) $club['external_id'],
+            'name' => Str::limit((string) $club['school'], 189, ''),
+            'mascot' => Str::limit((string) $club['mascot'], 119, ''),
+            'abbreviation' => Str::limit((string) $club['abbreviation'], 15, ''),
+            'conference' => $divisions[$club['external_id']] ?? '',
+            'color' => Str::limit((string) $club['color'], 15, ''),
+            'logo' => (string) $club['logo'],
+            'logo_dark' => (string) $club['logo_dark'],
+            /*
+             * 🚨 The slug carries the league. Two leagues can hold a club of
+             * the same name, `slug` is unique across the table, and the loser
+             * of that collision would silently become the winner's page.
+             */
+            'slug' => $this->slug($league, (string) ($club['slug'] ?: $club['school'])),
+        ];
     }
 
     /* -------------------------------------------------------------- rosters */
@@ -138,26 +146,10 @@ class RosterSync
     /** @return array{0: int, 1: int} */
     protected function rosters(): array
     {
-        $stale = Carbon::now()->subHours(self::REFRESH_HOURS);
-
-        /*
-         * 🚨 Oldest first, and a club never fetched sorts first of all — so a
-         * newly followed league fills in before anything is refreshed. A site
-         * that has just added the NBA wants thirty rosters, not one club's
-         * update.
-         */
-        $due = Team::query()
-            ->whereNotNull('external_id')
-            ->where(fn ($q) => $q->whereNull('roster_at')->orWhere('roster_at', '<', $stale))
-            ->orderByRaw('roster_at IS NOT NULL')
-            ->orderBy('roster_at')
-            ->limit(self::ROSTERS_PER_RUN)
-            ->get();
-
         $fetched = 0;
         $players = 0;
 
-        foreach ($due as $team) {
+        foreach ($this->due() as $team) {
             $league = $this->leagues->get($team->league);
 
             if (! $this->espn->supports($league)) {
@@ -179,83 +171,97 @@ class RosterSync
 
             $fetched++;
 
-            if ($roster === []) {
-                continue;
+            if ($roster !== []) {
+                $players += $this->players($league, $team, $roster);
             }
-
-            $players += $this->players($league, $team, $roster);
         }
 
         return [$fetched, $players];
     }
 
+    /**
+     * The clubs whose rosters this run fetches.
+     *
+     * 🚨 Never-fetched clubs first, then the stalest — so a newly followed
+     * league fills in before anything is refreshed. Two queries rather than one
+     * ordered on `roster_at IS NOT NULL`: where NULL sorts differs between
+     * MySQL, SQLite and PostgreSQL, and the builder has no portable way to say
+     * it.
+     *
+     * @return list<Team>
+     */
+    protected function due(): array
+    {
+        $never = Team::query()
+            ->whereNotNull('external_id')
+            ->whereNull('roster_at')
+            ->orderBy('id')
+            ->limit(self::ROSTERS_PER_RUN)
+            ->get()
+            ->all();
+
+        $room = self::ROSTERS_PER_RUN - count($never);
+
+        if ($room <= 0) {
+            return $never;
+        }
+
+        $stale = Team::query()
+            ->whereNotNull('external_id')
+            ->where('roster_at', '<', Carbon::now()->subHours(self::REFRESH_HOURS))
+            ->orderBy('roster_at')
+            ->limit($room)
+            ->get()
+            ->all();
+
+        return array_merge($never, $stale);
+    }
+
     /** @param list<array<string, mixed>> $roster */
     protected function players(League $league, Team $team, array $roster): int
     {
-        $written = 0;
+        $rows = [];
 
-        // 🚨 One query for the whole roster. Looked up player by player, a
-        // run of twelve clubs was well over a thousand SELECTs every hour.
-        $known = $this->known(Player::class, $league, array_column($roster, 'external_id'));
-
+        // Keyed on the provider's id: one row per athlete, however often the
+        // feed lists him.
         foreach ($roster as $row) {
-            $values = [
-                'team_id' => $team->id,
-                'name' => Str::limit((string) $row['name'], 189, ''),
-                'first_name' => Str::limit((string) $row['first_name'], 99, ''),
-                'last_name' => Str::limit((string) $row['last_name'], 99, ''),
-                'position' => Str::limit((string) $row['position'], 11, ''),
-                'position_group' => (string) $row['position_group'],
-                'jersey' => $row['jersey'],
-                'height' => $row['height'],
-                'weight' => $row['weight'],
-                'home_city' => Str::limit((string) $row['home_city'], 119, ''),
-                'home_state' => Str::limit((string) $row['home_state'], 15, ''),
-                'home_country' => Str::limit((string) $row['home_country'], 59, ''),
-                'college' => Str::limit((string) $row['college'], 119, ''),
-                'photo_url' => (string) $row['headshot'],
-            ];
-
-            $existing = $known[(string) $row['external_id']] ?? null;
-
-            if ($existing !== null) {
-                $existing->fill($values)->save();
-                $written++;
-
-                continue;
-            }
-
-            $known[(string) $row['external_id']] = Player::query()->create($values + [
-                'league' => $league->key,
-                'external_id' => $row['external_id'],
-                'slug' => $this->slug($league, (string) $row['name']).'-'.$row['external_id'],
-            ]);
-
-            $written++;
+            $rows[(string) $row['external_id']] = $this->playerValues($league, $team, $row);
         }
 
-        return $written;
+        // 🚨 One statement for the whole roster. Written player by player, a
+        // run of twelve clubs was well over a thousand queries every hour.
+        Player::query()->upsert(array_values($rows), ['league', 'external_id'], self::PLAYER_UPDATES);
+
+        return count($rows);
     }
 
     /**
-     * The rows already held for these external ids, keyed by the id as a string.
-     *
-     * @param class-string<Team|Player> $model
-     * @param list<mixed> $ids
-     * @return array<string, Team|Player>
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
      */
-    protected function known(string $model, League $league, array $ids): array
+    protected function playerValues(League $league, Team $team, array $row): array
     {
-        $ids = array_values(array_unique(array_map('strval', array_filter($ids, fn ($id) => $id !== null && $id !== ''))));
-        $out = [];
-
-        foreach (array_chunk($ids, 500) as $chunk) {
-            foreach ($model::query()->where('league', $league->key)->whereIn('external_id', $chunk)->get() as $row) {
-                $out[(string) $row->external_id] = $row;
-            }
-        }
-
-        return $out;
+        return [
+            'league' => $league->key,
+            'external_id' => (string) $row['external_id'],
+            'slug' => $this->slug($league, (string) $row['name']).'-'.$row['external_id'],
+            'team_id' => $team->id,
+            'name' => Str::limit((string) $row['name'], 189, ''),
+            'first_name' => Str::limit((string) $row['first_name'], 99, ''),
+            'last_name' => Str::limit((string) $row['last_name'], 99, ''),
+            'position' => Str::limit((string) $row['position'], 11, ''),
+            'position_group' => (string) $row['position_group'],
+            'jersey' => $row['jersey'],
+            'height' => $row['height'],
+            'weight' => $row['weight'],
+            'home_city' => Str::limit((string) $row['home_city'], 119, ''),
+            'home_state' => Str::limit((string) $row['home_state'], 15, ''),
+            'home_country' => Str::limit((string) $row['home_country'], 59, ''),
+            // 🚨 Written at all only since 1.3: until then every college roster's Class column was empty.
+            'class_year' => $row['class_year'],
+            'college' => Str::limit((string) $row['college'], 119, ''),
+            'photo_url' => (string) $row['headshot'],
+        ];
     }
 
     /* --------------------------------------------------------------- naming */
@@ -263,7 +269,7 @@ class RosterSync
     /** @return list<string> the league keys this site follows */
     protected function following(): array
     {
-        $raw = trim((string) $this->settings->get('ernestdefoe-roster.leagues', ''));
+        $raw = trim((string) $this->settings->get('ernestdefoe-roster.leagues'));
 
         if ($raw === '') {
             return [];

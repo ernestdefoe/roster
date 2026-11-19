@@ -41,10 +41,4 @@ class Team extends AbstractModel
     {
         return $this->hasMany(Player::class, 'team_id');
     }
-
-    /** Whether this club is one CollegeFootballData answers for. */
-    public function isCollegiate(): bool
-    {
-        return (new Service\Leagues\Leagues())->get($this->league)->collegiate;
-    }
 }

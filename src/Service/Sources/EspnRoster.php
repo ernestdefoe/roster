@@ -4,13 +4,15 @@ namespace ErnestDefoe\Roster\Service\Sources;
 
 use ErnestDefoe\Roster\Service\Leagues\League;
 use GuzzleHttp\Client as HttpClient;
+use Psr\Log\LoggerInterface;
+use Throwable;
 
 /**
- * ESPN's team and roster endpoints, for every league that is not college
- * football.
+ * ESPN's team, standings and roster endpoints, for every league this extension
+ * carries.
  *
- * 🚨 Two calls' worth of shapes, both read off live responses in September 2026
- * rather than from documentation, because ESPN publishes none for this:
+ * 🚨 Shapes read off live responses in September 2026 rather than from
+ * documentation, because ESPN publishes none for this:
  *
  *     /{sport}/{league}/teams              → sports[0].leagues[0].teams[].team
  *     /{sport}/{league}/teams/{id}/roster  → athletes[]
@@ -20,10 +22,7 @@ use GuzzleHttp\Client as HttpClient;
  * NBA answers a FLAT list of athletes. Reading only one loses every player in
  * half the leagues, and the failure is silent: an empty roster page.
  *
- * 🚨 No API key, which is why this is the multi-sport source.
- * CollegeFootballData stays where it is used because it carries the recruiting
- * class, the transfer portal and season-by-season statistics that ESPN's roster
- * endpoint does not answer at all — not because ESPN could not list a roster.
+ * 🚨 No API key and no allowance, which is why it is the source.
  */
 class EspnRoster
 {
@@ -42,8 +41,10 @@ class EspnRoster
     /** @var array<string, array<string, string>> league key => id => division */
     private array $divisionCache = [];
 
-    public function __construct(protected HttpClient $http)
-    {
+    public function __construct(
+        protected HttpClient $http,
+        protected LoggerInterface $log,
+    ) {
     }
 
     public function supports(League $league): bool
@@ -62,37 +63,7 @@ class EspnRoster
             return [];
         }
 
-        /*
-         * 🚨 PAGED, and a page is capped however large a limit is asked for.
-         *
-         * College football answers this endpoint with every school ESPN has —
-         * upwards of seven hundred, down to Division III — and a single call
-         * returned the first two hundred alphabetically. Alabama was not among
-         * them. The symptom was a site missing its most famous team while
-         * carrying Adams State, and nothing anywhere said the list had been cut.
-         */
-        $rows = [];
-
-        for ($page = 1; $page <= self::MAX_TEAM_PAGES; $page++) {
-            $body = $this->get($league->espnPath.'/teams', ['limit' => '400', 'page' => (string) $page]);
-
-            if ($body === null) {
-                break;
-            }
-
-            $chunk = $body['sports'][0]['leagues'][0]['teams'] ?? [];
-
-            if (! is_array($chunk) || $chunk === []) {
-                break;
-            }
-
-            $rows = array_merge($rows, $chunk);
-
-            // A short page is the last page.
-            if (count($chunk) < 400) {
-                break;
-            }
-        }
+        $rows = $this->teamPages($league);
 
         if ($rows === []) {
             return [];
@@ -116,37 +87,89 @@ class EspnRoster
         $out = [];
 
         foreach ($rows as $row) {
-            $team = is_array($row) ? ($row['team'] ?? null) : null;
+            $club = $this->club($row, $scope);
 
-            if (! is_array($team) || ($team['id'] ?? '') === '') {
-                continue;
+            if ($club !== null) {
+                $out[] = $club;
             }
-
-            if ($scope !== [] && ! isset($scope[(string) $team['id']])) {
-                continue;
-            }
-
-            $out[] = [
-                'external_id' => (string) $team['id'],
-                'school' => (string) ($team['displayName'] ?? ''),
-                'mascot' => (string) ($team['name'] ?? ''),
-                'slug' => (string) ($team['slug'] ?? ''),
-                'abbreviation' => (string) ($team['abbreviation'] ?? ''),
-                'color' => (string) ($team['color'] ?? ''),
-                'alt_color' => (string) ($team['alternateColor'] ?? ''),
-                'logo' => $this->logo($team, false),
-                'logo_dark' => $this->logo($team, true),
-                /*
-                 * 🚨 The division, where ESPN gives one. It is what the index
-                 * groups by, and a professional league without it renders as
-                 * one long ungrouped list — which is correct for the Premier
-                 * League and wrong for the NFL.
-                 */
-                'conference' => $this->conference($team),
-            ];
         }
 
         return $out;
+    }
+
+    /**
+     * Every page of the league's club list.
+     *
+     * 🚨 PAGED, and a page is capped however large a limit is asked for.
+     *
+     * College football answers this endpoint with every school ESPN has —
+     * upwards of seven hundred, down to Division III — and a single call
+     * returned the first two hundred alphabetically. Alabama was not among
+     * them. The symptom was a site missing its most famous team while carrying
+     * Adams State, and nothing anywhere said the list had been cut.
+     *
+     * @return list<mixed>
+     */
+    private function teamPages(League $league): array
+    {
+        $rows = [];
+
+        for ($page = 1; $page <= self::MAX_TEAM_PAGES; $page++) {
+            $body = $this->get($league->espnPath.'/teams', ['limit' => '400', 'page' => (string) $page]);
+            $chunk = $body['sports'][0]['leagues'][0]['teams'] ?? [];
+
+            if (! is_array($chunk) || $chunk === []) {
+                break;
+            }
+
+            $rows = array_merge($rows, $chunk);
+
+            // A short page is the last page.
+            if (count($chunk) < 400) {
+                break;
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * One row of the club list, shaped for the sync; null when it is not a club
+     * or is outside the division the standings cover.
+     *
+     * @param array<string, string> $scope
+     * @return array<string, mixed>|null
+     */
+    private function club(mixed $row, array $scope): ?array
+    {
+        $team = is_array($row) ? ($row['team'] ?? null) : null;
+
+        if (! is_array($team) || ($team['id'] ?? '') === '') {
+            return null;
+        }
+
+        if ($scope !== [] && ! isset($scope[(string) $team['id']])) {
+            return null;
+        }
+
+        return [
+            'external_id' => (string) $team['id'],
+            'school' => (string) ($team['displayName'] ?? ''),
+            'mascot' => (string) ($team['name'] ?? ''),
+            'slug' => (string) ($team['slug'] ?? ''),
+            'abbreviation' => (string) ($team['abbreviation'] ?? ''),
+            'color' => (string) ($team['color'] ?? ''),
+            'alt_color' => (string) ($team['alternateColor'] ?? ''),
+            'logo' => $this->logo($team, false),
+            'logo_dark' => $this->logo($team, true),
+            /*
+             * 🚨 The division, where ESPN gives one. It is what the index
+             * groups by, and a professional league without it renders as one
+             * long ungrouped list — which is correct for the Premier League and
+             * wrong for the NFL.
+             */
+            'conference' => $this->conference($team),
+        ];
     }
 
     /**
@@ -188,40 +211,56 @@ class EspnRoster
             return [];
         }
 
+        return $this->divisionCache[$league->key] = $this->divisionMap($body);
+    }
+
+    /**
+     * @param array<string, mixed> $body the standings response
+     * @return array<string, string> ESPN team id => division name
+     */
+    private function divisionMap(array $body): array
+    {
         $out = [];
 
-        foreach ((array) ($body['children'] ?? []) as $conference) {
-            if (! is_array($conference)) {
-                continue;
-            }
+        foreach ($this->standingGroups($body) as $group) {
+            $name = mb_substr(trim((string) ($group['name'] ?? '')), 0, 100);
 
-            /*
-             * 🚨 The DIVISION where there is one, the conference where there is
-             * not. A league with two levels answers its divisions as children;
-             * one with a single level answers its clubs directly, and taking
-             * only the children would return nothing for it.
-             */
-            $groups = (array) ($conference['children'] ?? []);
-            $groups = $groups === [] ? [$conference] : $groups;
+            foreach ((array) (($group['standings'] ?? [])['entries'] ?? []) as $entry) {
+                $id = (string) ((is_array($entry) ? ($entry['team'] ?? []) : [])['id'] ?? '');
 
-            foreach ($groups as $group) {
-                if (! is_array($group)) {
-                    continue;
-                }
-
-                $name = mb_substr(trim((string) ($group['name'] ?? '')), 0, 100);
-
-                foreach ((array) (($group['standings'] ?? [])['entries'] ?? []) as $entry) {
-                    $id = (string) ((is_array($entry) ? ($entry['team'] ?? []) : [])['id'] ?? '');
-
-                    if ($id !== '' && $name !== '') {
-                        $out[$id] = $name;
-                    }
+                if ($id !== '' && $name !== '') {
+                    $out[$id] = $name;
                 }
             }
         }
 
-        return $this->divisionCache[$league->key] = $out;
+        return $out;
+    }
+
+    /**
+     * 🚨 The DIVISION where there is one, the conference where there is not. A
+     * league with two levels answers its divisions as children; one with a
+     * single level answers its clubs directly, and taking only the children
+     * would return nothing for it.
+     *
+     * @param array<string, mixed> $body the standings response
+     * @return list<array<string, mixed>>
+     */
+    private function standingGroups(array $body): array
+    {
+        $out = [];
+
+        foreach ((array) ($body['children'] ?? []) as $conference) {
+            $children = is_array($conference) ? (array) ($conference['children'] ?? []) : [];
+
+            foreach ($children === [] ? [$conference] : $children as $group) {
+                if (is_array($group)) {
+                    $out[] = $group;
+                }
+            }
+        }
+
+        return $out;
     }
 
     /**
@@ -263,10 +302,17 @@ class EspnRoster
 
         $athletes = $body['athletes'] ?? [];
 
-        if (! is_array($athletes)) {
-            return [];
-        }
+        return is_array($athletes) ? $this->athletes($athletes) : [];
+    }
 
+    /**
+     * Every athlete in a roster response, in either of its shapes.
+     *
+     * @param array<mixed> $athletes
+     * @return list<array<string, mixed>>
+     */
+    private function athletes(array $athletes): array
+    {
         $out = [];
 
         foreach ($athletes as $entry) {
@@ -279,24 +325,15 @@ class EspnRoster
              * Keying it off the league would be a list to maintain, and the one
              * ESPN actually varies is the payload.
              */
-            if (isset($entry['items']) && is_array($entry['items'])) {
-                $group = $this->groupName($entry['position'] ?? '');
+            $grouped = isset($entry['items']) && is_array($entry['items']);
+            $group = $grouped ? $this->groupName($entry['position'] ?? '') : '';
 
-                foreach ($entry['items'] as $athlete) {
-                    $player = $this->player($athlete, $group);
+            foreach ($grouped ? $entry['items'] : [$entry] as $athlete) {
+                $player = $this->player($athlete, $group);
 
-                    if ($player !== null) {
-                        $out[] = $player;
-                    }
+                if ($player !== null) {
+                    $out[] = $player;
                 }
-
-                continue;
-            }
-
-            $player = $this->player($entry, '');
-
-            if ($player !== null) {
-                $out[] = $player;
             }
         }
 
@@ -305,7 +342,18 @@ class EspnRoster
 
     /* ------------------------------------------------------------- shaping */
 
-    /** @return array<string, mixed>|null */
+    /**
+     * One athlete, shaped for the sync.
+     *
+     * 🚨 Everything measured is nullable on purpose. ESPN omits a jersey for an
+     * unsigned player, a height for most of soccer, and an age for anybody
+     * whose birthday it does not hold — and a zero stored for a missing
+     * measurement is a page that says a player is 0in tall. The JERSEY is the
+     * exception and has its own guard: see jersey(), where 0 is a number
+     * somebody actually wears.
+     *
+     * @return array<string, mixed>|null
+     */
     private function player(mixed $athlete, string $group): ?array
     {
         if (! is_array($athlete) || ($athlete['id'] ?? '') === '') {
@@ -318,47 +366,47 @@ class EspnRoster
             return null;
         }
 
-        $birthPlace = is_array($athlete['birthPlace'] ?? null) ? $athlete['birthPlace'] : [];
+        $birthPlace = $this->section($athlete, 'birthPlace');
+        $position = $this->section($athlete, 'position');
 
         return [
             'external_id' => (string) $athlete['id'],
             'name' => $name,
             'first_name' => (string) ($athlete['firstName'] ?? ''),
             'last_name' => (string) ($athlete['lastName'] ?? ''),
-            'position' => (string) ((is_array($athlete['position'] ?? null) ? $athlete['position'] : [])['abbreviation'] ?? ''),
-            'position_group' => $group !== '' ? $group : $this->groupName(
-                (is_array($athlete['position'] ?? null) ? $athlete['position'] : [])['displayName'] ?? ''
-            ),
-            /*
-             * 🚨 Everything below is nullable on purpose. ESPN omits a jersey
-             * for an unsigned player, a height for most of soccer, and an age
-             * for anybody whose birthday it does not hold — and a zero stored
-             * for a missing measurement is a page that says a player is 0in
-             * tall. The JERSEY is the exception and has its own guard: see
-             * jersey(), where 0 is a number somebody actually wears.
-             */
+            'position' => (string) ($position['abbreviation'] ?? ''),
+            'position_group' => $group !== '' ? $group : $this->groupName($position['displayName'] ?? ''),
             'jersey' => $this->jersey($athlete['jersey'] ?? null),
             'height' => $this->number($athlete['height'] ?? null),
             'weight' => $this->number($athlete['weight'] ?? null),
             'home_city' => (string) ($birthPlace['city'] ?? ''),
             'home_state' => (string) ($birthPlace['state'] ?? ''),
             'home_country' => (string) ($birthPlace['country'] ?? ''),
-            'college' => (string) ((is_array($athlete['college'] ?? null) ? $athlete['college'] : [])['name'] ?? ''),
-            /*
-             * 🚨 The class, where the sport has one. ESPN sends it as
-             * `experience.years` — 1 for a freshman through to 5 — beside a
-             * display value this deliberately does not store: "Freshman" is
-             * English, and the number is what the locale file turns into a word
-             * the reader can read. Null everywhere else, because a professional
-             * has no class and a 1 stored for one would say "Freshman" under a
-             * thirty-year-old.
-             */
+            'college' => (string) ($this->section($athlete, 'college')['name'] ?? ''),
             'class_year' => $this->classYear($athlete['experience'] ?? null),
-            'headshot' => (string) ((is_array($athlete['headshot'] ?? null) ? $athlete['headshot'] : [])['href'] ?? ''),
+            'headshot' => (string) ($this->section($athlete, 'headshot')['href'] ?? ''),
         ];
     }
 
-    /** ESPN's `experience` block, as the 1–5 the column holds. */
+    /**
+     * A nested block of the athlete, or an empty one when the feed left it out.
+     *
+     * @param array<string, mixed> $athlete
+     * @return array<string, mixed>
+     */
+    private function section(array $athlete, string $key): array
+    {
+        return is_array($athlete[$key] ?? null) ? $athlete[$key] : [];
+    }
+
+    /**
+     * ESPN's `experience` block, as the 1–5 the column holds.
+     *
+     * 🚨 The number, never the display value beside it: "Freshman" is English,
+     * and the number is what the locale file turns into a word the reader can
+     * read. Null everywhere else, because a professional has no class and a 1
+     * stored for one would say "Freshman" under a thirty-year-old.
+     */
     private function classYear(mixed $experience): ?int
     {
         if (! is_array($experience)) {
@@ -477,15 +525,28 @@ class EspnRoster
          * survives a refactor. That trap cost the Convoro build of this an
          * afternoon and Picks a whole season of live scores.
          */
-        $response = $this->http->get($base.'/'.ltrim($path, '/'), [
-            'query' => $params,
-            'timeout' => self::TIMEOUT,
-            'headers' => [
-                'Accept' => 'application/json',
-                'User-Agent' => 'curl/8',
-            ],
-            'http_errors' => false,
-        ]);
+        try {
+            $response = $this->http->get($base.'/'.ltrim($path, '/'), [
+                'query' => $params,
+                'timeout' => self::TIMEOUT,
+                'connect_timeout' => 5,
+                'headers' => [
+                    'Accept' => 'application/json',
+                    'User-Agent' => 'curl/8',
+                ],
+                'http_errors' => false,
+            ]);
+        } catch (Throwable $e) {
+            /*
+             * 🚨 A network failure (DNS, timeout, refused connection) is an
+             * empty answer for this call, not the end of the run. Thrown, it
+             * aborted the whole hourly sync and left every other league
+             * unrefreshed until the next tick.
+             */
+            $this->log->warning('[roster] ESPN request failed: '.$path.' '.$e->getMessage());
+
+            return null;
+        }
 
         if ($response->getStatusCode() !== 200) {
             return null;

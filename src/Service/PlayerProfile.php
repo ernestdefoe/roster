@@ -7,6 +7,7 @@ use ErnestDefoe\Roster\Service\Leagues\Leagues;
 use ErnestDefoe\Roster\Team;
 use GuzzleHttp\Client as HttpClient;
 use Illuminate\Contracts\Cache\Repository as Cache;
+use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
@@ -37,6 +38,8 @@ class PlayerProfile
     public function __construct(
         protected HttpClient $http,
         protected Cache $cache,
+        protected Leagues $leagues,
+        protected LoggerInterface $log,
     ) {
     }
 
@@ -46,7 +49,7 @@ class PlayerProfile
      */
     public function isCached(Player $player): bool
     {
-        $league = (new Leagues())->get($player->league);
+        $league = $this->leagues->get($player->league);
 
         if ($league->provider === 'espn' && $league->espnPath !== '' && $player->external_id
             && ! is_array($this->cache->get($this->espnKey($league->espnPath, (string) $player->external_id)))) {
@@ -58,16 +61,14 @@ class PlayerProfile
 
     /**
      * 🚨 $mayFetch = false answers from the cache only: the fresh copy, else
-     * the last good one (kept two weeks), else nothing. That is what a page
-     * gets while the uncached-build budget is spent, so a crawl walking every
-     * player cannot hold PHP workers on ESPN and Wikipedia; a page shown in
-     * that window simply has fewer sections until the next visit.
+     * the last good one (kept two weeks), else nothing. That is what every
+     * page request gets; only the queued BuildPlayerProfile job fetches.
      *
      * @return array<string, mixed>
      */
     public function for(Player $player, Team $team, bool $mayFetch): array
     {
-        $league = (new Leagues())->get($player->league);
+        $league = $this->leagues->get($player->league);
 
         $espn = [];
         if ($league->provider === 'espn' && $league->espnPath !== '' && $player->external_id) {
@@ -466,7 +467,10 @@ class PlayerProfile
             $data = json_decode((string) $response->getBody(), true);
 
             return is_array($data) ? $data : null;
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            // A provider outage costs this section, not the page.
+            $this->log->warning('[roster] profile fetch failed: '.$url.' '.$e->getMessage());
+
             return null;
         }
     }

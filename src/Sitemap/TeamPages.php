@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
  * Every team's roster page, offered to search engines.
  *
  * 🚨 This class names a parent that belongs to another extension, so nothing
- * may MENTION it unless fof/sitemap is installed — see the guard in extend.php.
+ * may MENTION it unless fof/sitemap is enabled — see the Conditional in extend.php.
  * PHP resolves a parent class at load time, and a reference from an always-run
  * file would be a fatal error on a site that simply does not use sitemaps.
  *

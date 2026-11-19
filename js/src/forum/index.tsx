@@ -6,13 +6,8 @@ import LinkButton from 'flarum/common/components/LinkButton';
 import registerBlocks from './blocks';
 
 app.initializers.add('ernestdefoe-roster', () => {
-  // The crest wall, offered to Page Builder. Registration only.
-  registerBlocks();
-
-  // Code-split: each page loads when someone opens it, not with every page.
-  app.routes['roster.index'] = { path: '/roster', component: () => import('./components/RosterIndexPage') };
-  app.routes['roster.team'] = { path: '/roster/:slug', component: () => import('./components/RosterTeamPage') };
-  app.routes['roster.player'] = { path: '/roster/:slug/:player', component: () => import('./components/RosterPlayerPage') };
+  // The crest wall, offered to Page Builder where it is enabled. Registration only.
+  if ('ernestdefoe-page-builder' in flarum.extensions) registerBlocks();
 
   /*
    * A place to click, in the nav every other page uses.
@@ -32,3 +27,5 @@ app.initializers.add('ernestdefoe-roster', () => {
     );
   });
 });
+
+export { default as extend } from './extend';

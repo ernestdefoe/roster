@@ -1,6 +1,6 @@
 {
   "extends": "flarum-tsconfig",
-  "include": ["src/**/*", "@types/**/*"],
+  "include": ["src/**/*", "../vendor/flarum/core/js/dist-typings/@types/**/*", "@types/**/*"],
   "compilerOptions": {
     "typeRoots": ["../node_modules/@types", "./node_modules/@types"],
     "baseUrl": ".",

@@ -49,3 +49,21 @@ abstract class AbstractBlock implements BlockInterface
         return [];
     }
 }
+
+namespace Ernestdefoe\PageBuilder\Extend;
+
+use Flarum\Extend\ExtenderInterface;
+use Flarum\Extension\Extension;
+use Illuminate\Contracts\Container\Container;
+
+class PageBuilderBlock implements ExtenderInterface
+{
+    /** @param class-string<\Ernestdefoe\PageBuilder\Block\BlockInterface> $blockClass */
+    public function __construct(protected string $blockClass)
+    {
+    }
+
+    public function extend(Container $container, ?Extension $extension = null): void
+    {
+    }
+}

@@ -2,21 +2,22 @@
 
 namespace ErnestDefoe\Roster;
 
-use ErnestDefoe\Roster\Api\Controller\PlayerController;
-use ErnestDefoe\Roster\Api\Controller\TeamController;
-use ErnestDefoe\Roster\Api\Controller\TeamsController;
+use ErnestDefoe\Roster\Api\ForumResourceFields;
+use ErnestDefoe\Roster\Api\Resource\PlayerResource;
+use ErnestDefoe\Roster\Api\Resource\TeamResource;
 use ErnestDefoe\Roster\Console\SyncCommand;
+use ErnestDefoe\Roster\Frontend\AdminLeagues;
 use ErnestDefoe\Roster\Frontend\RosterPageContent;
-use ErnestDefoe\Roster\Service\Leagues\Leagues;
+use Flarum\Api\Resource\ForumResource;
 use Flarum\Extend;
-use Flarum\Frontend\Document;
+use Flarum\Search\Database\DatabaseSearchDriver;
 
-$extenders = [
+return [
     /*
-     * 🚨 The routes are registered on the FRONTEND as well as the API. Without
-     * the frontend route a visitor who opens /roster directly — from a link, a
-     * bookmark, a search result — gets the discussion list instead, and only
-     * in-app navigation works.
+     * 🚨 The routes are registered on the FRONTEND as well as in the forum's
+     * JavaScript. Without the frontend route a visitor who opens /roster
+     * directly — from a link, a bookmark, a search result — gets the
+     * discussion list instead, and only in-app navigation works.
      */
     (new Extend\Frontend('forum'))
         ->js(__DIR__.'/js/dist/forum.js')
@@ -29,28 +30,26 @@ $extenders = [
 
     (new Extend\Frontend('admin'))
         ->js(__DIR__.'/js/dist/admin.js')
-        /*
-         * 🚨 The league list reaches the admin from the registry rather than
-         * being written into the JavaScript. A second copy of the list in the
-         * bundle goes stale the first time an extension registers a league.
-         */
-        ->content(function (Document $document): void {
-            $document->payload['rosterLeagues'] = (new Leagues())->choices();
-        }),
+        ->content(AdminLeagues::class),
 
     new Extend\Locales(__DIR__.'/resources/locale'),
 
-    (new Extend\Routes('api'))
-        ->get('/roster/teams', 'roster.api.teams', TeamsController::class)
-        ->get('/roster/team', 'roster.api.team', TeamController::class)
-        ->get('/roster/player', 'roster.api.player', PlayerController::class),
+    (new Extend\ServiceProvider())
+        ->register(RosterServiceProvider::class),
+
+    new Extend\ApiResource(TeamResource::class),
+
+    (new Extend\SearchDriver(DatabaseSearchDriver::class))
+        ->addSearcher(Team::class, Search\TeamSearcher::class)
+        ->addFilter(Search\TeamSearcher::class, Search\LeagueFilter::class),
+
+    new Extend\ApiResource(PlayerResource::class),
+
+    (new Extend\ApiResource(ForumResource::class))
+        ->fields(ForumResourceFields::class),
 
     (new Extend\Settings())
-        /*
-         * College football is not in this list and cannot be: it is
-         * CollegeFootballData's, and syncing it from ESPN would overwrite a
-         * season-by-season history with a current roster.
-         */
+        // No league until an administrator ticks one: every league is opt-in.
         ->default('ernestdefoe-roster.leagues', ''),
 
     (new Extend\Console())
@@ -58,37 +57,23 @@ $extenders = [
         ->schedule(SyncCommand::class, function ($event) {
             $event->hourly()->withoutOverlapping();
         }),
+
+    /*
+     * The crest wall as a Page Builder block, only where Page Builder is on.
+     * The block class extends Page Builder's own base class, so nothing names
+     * it outside this callback.
+     */
+    (new Extend\Conditional())
+        ->whenExtensionEnabled('ernestdefoe-page-builder', fn () => [
+            new \Ernestdefoe\PageBuilder\Extend\PageBuilderBlock(Block\CrestWallBlock::class),
+        ])
+        /*
+         * Every team's roster page offered to search engines, where fof/sitemap
+         * is on. TeamPages extends fof/sitemap's Resource, so nothing names it
+         * outside this callback.
+         */
+        ->whenExtensionEnabled('fof-sitemap', fn () => [
+            (new \FoF\Sitemap\Extend\Sitemap())
+                ->addResource(Sitemap\TeamPages::class),
+        ]),
 ];
-
-/*
- * The crest wall as a Page Builder block — only where Page Builder is present.
- *
- * 🚨 Guarded on the EXTENDER's class, not on the extension being enabled. This
- * file is read at boot, before anything knows which extensions are on, and
- * naming a class from an extension that is not installed is a fatal at compile
- * time rather than a missing block. The block class is never mentioned outside
- * this branch for the same reason: it extends a base class that would not be
- * there to extend.
- */
-if (class_exists(\Ernestdefoe\PageBuilder\Extend\PageBuilderBlock::class)) {
-    $extenders[] = new \Ernestdefoe\PageBuilder\Extend\PageBuilderBlock(
-        \ErnestDefoe\Roster\Block\CrestWallBlock::class
-    );
-}
-
-/*
- * Every team's roster page offered to search engines — 136 real pages that were
- * previously reachable only by somebody who already knew they were there.
- *
- * 🚨 Guarded on the EXTENDER's class, and the resource is named only inside the
- * branch, for the same reason as the block above: this file is read at boot,
- * and FoF\Sitemap\Resources\Resource is the PARENT of the class below. Naming
- * it on a site without fof/sitemap is a fatal at load time rather than a
- * missing sitemap entry.
- */
-if (class_exists(\FoF\Sitemap\Extend\Sitemap::class)) {
-    $extenders[] = (new \FoF\Sitemap\Extend\Sitemap())
-        ->addResource(\ErnestDefoe\Roster\Sitemap\TeamPages::class);
-}
-
-return $extenders;

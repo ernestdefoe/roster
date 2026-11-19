@@ -4,15 +4,16 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Link from 'flarum/common/components/Link';
 import { hasWaymark, trail, teamsCrumb } from '../waymark';
 import crestUrl from '../crest';
+import type Team from '../models/Team';
+import type Player from '../models/Player';
 
-declare const m: any;
+type Group = { name: string; players: Player[] };
 
 /** One club: its crest, its division, and the roster grouped as the sport groups it. */
 export default class RosterTeamPage extends Page {
   loading = true;
-  team: any = null;
-  groups: any[] = [];
-  collegiate = false;
+  team: Team | null = null;
+  groups: Group[] = [];
 
   /* The four gridiron groups are ours to name; every other group name came
      from the provider and is printed exactly as it was given. */
@@ -26,25 +27,43 @@ export default class RosterTeamPage extends Page {
   oninit(vnode: any) {
     super.oninit(vnode);
 
-    app
-      .request({
-        method: 'GET',
-        url: `${app.forum.attribute('apiUrl')}/roster/team`,
-        params: { slug: m.route.param('slug') },
-      })
-      .then((data: any) => {
-        this.team = data.team;
-        this.groups = data.groups || [];
-        this.collegiate = !!data.collegiate;
-        this.loading = false;
-        app.setTitle(this.team?.name || '');
-        app.history.push('roster', this.team?.name || '');
-        m.redraw();
+    app.store
+      .find<Team>('roster-teams', m.route.param('slug'), { include: 'players' })
+      .then((team) => {
+        this.team = team;
+        this.groups = RosterTeamPage.group((team.players() || []).filter((p): p is Player => !!p));
+        app.setTitle(team.name());
+        app.history.push('roster', team.name());
       })
       .catch(() => {
+        // A slug with no club: the page says so below.
+        this.team = null;
+      })
+      .finally(() => {
         this.loading = false;
         m.redraw();
       });
+  }
+
+  /**
+   * Numbered players first, by number, then the rest by name; each group in
+   * the order its first player appears.
+   *
+   * 🚨 A null check, NOT a falsy one. Number 0 has been legal in college
+   * football since 2020 and is common now, and `0` is falsy.
+   */
+  static group(players: Player[]): Group[] {
+    const sorted = [...players].sort((a, b) => {
+      const ja = a.jersey();
+      const jb = b.jersey();
+      if ((ja === null) !== (jb === null)) return ja === null ? 1 : -1;
+      return (ja ?? 0) - (jb ?? 0) || a.name().localeCompare(b.name());
+    });
+
+    const groups = new Map<string, Player[]>();
+    sorted.forEach((p) => groups.set(p.positionGroup(), [...(groups.get(p.positionGroup()) || []), p]));
+
+    return [...groups.entries()].map(([name, list]) => ({ name, players: list }));
   }
 
   view() {
@@ -56,9 +75,11 @@ export default class RosterTeamPage extends Page {
         </div>
       );
 
+    const team = this.team;
+
     return (
       <div className="RosterPage RosterPage--team">
-        {trail([teamsCrumb(), { label: this.team.name }])}
+        {trail([teamsCrumb(), { label: team.name() }])}
         <div className="container">
           {hasWaymark() ? null : (
             <Link className="RosterTeam-back" href={app.route('roster.index')}>
@@ -67,63 +88,67 @@ export default class RosterTeamPage extends Page {
           )}
 
           <header className="RosterTeam-head">
-            {this.team.logo ? <img className="RosterTeam-crest" src={crestUrl(this.team.logo, 64)} alt="" /> : null}
+            {team.logo() ? <img className="RosterTeam-crest" src={crestUrl(team.logo()!, 64)} alt="" /> : null}
             <div>
               <h1>
-                {this.team.name} {this.team.mascot ? <small>{this.team.mascot}</small> : null}
+                {team.name()} {team.mascot() ? <small>{team.mascot()}</small> : null}
               </h1>
-              {this.team.conference ? <p className="RosterTeam-conference">{this.team.conference}</p> : null}
+              {team.conference() ? <p className="RosterTeam-conference">{team.conference()}</p> : null}
             </div>
           </header>
 
           {this.groups.length === 0 ? (
             <p className="RosterPage-empty">{app.translator.trans('ernestdefoe-roster.forum.no_roster')}</p>
           ) : (
-            this.groups.map((group: any) => (
-              <section className="RosterGroup">
-                <h3>{RosterTeamPage.LABELS[group.group] ? app.translator.trans(RosterTeamPage.LABELS[group.group]) : group.group}</h3>
-                <div className="RosterTable-scroll">
-                  <table className="RosterTable">
-                    <thead>
-                      <tr>
-                        <th>{app.translator.trans('ernestdefoe-roster.forum.jersey')}</th>
-                        <th>{app.translator.trans('ernestdefoe-roster.forum.player')}</th>
-                        <th>{app.translator.trans('ernestdefoe-roster.forum.position')}</th>
-                        {/* A college column. Nobody in the NBA is a sophomore. */}
-                        {this.collegiate && <th>{app.translator.trans('ernestdefoe-roster.forum.class')}</th>}
-                        <th>{app.translator.trans('ernestdefoe-roster.forum.height')}</th>
-                        <th>{app.translator.trans('ernestdefoe-roster.forum.weight')}</th>
-                        <th>{app.translator.trans('ernestdefoe-roster.forum.hometown')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {group.players.map((p: any) => (
-                        <tr>
-                          {/*
-                            🚨 A null check, NOT a falsy one. Number 0 has been
-                            legal in college football since 2020 and is common
-                            now, and `0` is falsy — a truthiness test renders an
-                            empty cell for a jersey the player genuinely has.
-                          */}
-                          <td className="RosterTable-num">{p.jersey !== null && p.jersey !== undefined ? p.jersey : ''}</td>
-                          <td className="RosterTable-name">
-                            <Link href={app.route('roster.player', { slug: m.route.param('slug'), player: p.slug })}>{p.name}</Link>
-                          </td>
-                          <td>{p.position}</td>
-                          {this.collegiate && <td>{this.classYear(p.classYear)}</td>}
-                          <td>{p.height || ''}</td>
-                          <td>{p.weight || ''}</td>
-                          <td>{p.hometown || ''}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            ))
+            this.groups.map((group) => this.section(group, team.collegiate()))
           )}
         </div>
       </div>
+    );
+  }
+
+  section(group: Group, collegiate: boolean) {
+    const t = (key: string) => app.translator.trans(`ernestdefoe-roster.forum.${key}`);
+
+    return (
+      <section className="RosterGroup">
+        <h3>{RosterTeamPage.LABELS[group.name] ? app.translator.trans(RosterTeamPage.LABELS[group.name]) : group.name}</h3>
+        <div className="RosterTable-scroll">
+          <table className="RosterTable">
+            <thead>
+              <tr>
+                <th>{t('jersey')}</th>
+                <th>{t('player')}</th>
+                <th>{t('position')}</th>
+                {/* A college column. Nobody in the NBA is a sophomore. */}
+                {collegiate && <th>{t('class')}</th>}
+                <th>{t('height')}</th>
+                <th>{t('weight')}</th>
+                <th>{t('hometown')}</th>
+              </tr>
+            </thead>
+            <tbody>{group.players.map((p) => this.row(p, collegiate))}</tbody>
+          </table>
+        </div>
+      </section>
+    );
+  }
+
+  row(p: Player, collegiate: boolean) {
+    const jersey = p.jersey();
+
+    return (
+      <tr>
+        <td className="RosterTable-num">{jersey !== null && jersey !== undefined ? jersey : ''}</td>
+        <td className="RosterTable-name">
+          <Link href={app.route('roster.player', { slug: m.route.param('slug'), player: p.slug() })}>{p.name()}</Link>
+        </td>
+        <td>{p.position()}</td>
+        {collegiate && <td>{this.classYear(p.classYear())}</td>}
+        <td>{p.height() || ''}</td>
+        <td>{p.weight() || ''}</td>
+        <td>{p.hometown() || ''}</td>
+      </tr>
     );
   }
 

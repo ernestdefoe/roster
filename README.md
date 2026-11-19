@@ -8,7 +8,7 @@ Browse by conference or division, open a club, and see who is on it.
 
 A club's roster, grouped the way the sport groups it:
 
-![An Ohio State roster: offence by position, with class, height, weight and hometown](screenshots/roster.png)
+![An Ohio State roster: offense by position, with class, height, weight and hometown](screenshots/roster.png)
 
 ## Which leagues
 
@@ -40,11 +40,11 @@ Every name on a roster is a link to that player's own page:
 
 Every section only appears when there's something in it. ESPN pads a quiet player's news with whatever college football is talking about that day, so stories that never name him are left out; a walk-on gets his bio and nothing invented.
 
-What ESPN and Wikipedia return is cached for six hours per player (a week for Wikipedia), so a busy roster doesn't turn into a stream of outside requests. With [Waymark](https://github.com/ernestdefoe/waymark) installed, the roster pages carry its breadcrumb trail: Home › Roster › Texas › Arch Manning.
+What ESPN and Wikipedia return is cached for six hours per player (a week for Wikipedia), so a busy roster doesn't turn into a stream of outside requests. The first visit to a player's page gathers it as a queued job: on a forum with a queue worker the page opens straight away and fills in a few seconds later. With [Waymark](https://github.com/ernestdefoe/waymark) installed, the roster pages carry its breadcrumb trail: Home › Roster › Texas › Arch Manning.
 
 ## Things worth knowing
 
-🚨 **The position groups are the provider's own.** Offence, defence and
+🚨 **The position groups are the provider's own.** Offense, defense and
 specialists is a fact about gridiron; ESPN answers Pitchers and Catchers,
 Centers and Wingers. Mapping a shortstop through a list of football positions
 returns "other" for every player on the team, so the group is stored as it was
@@ -54,7 +54,7 @@ given and only gridiron's four are translated.
 sophomore in the NBA, and an empty column under a heading that means nothing in
 the sport reads as missing data rather than as a concept the sport lacks.
 
-🚨 **A box score is one call per club on ESPN**, so the sync is capped at a
+🚨 **A roster is one call per club on ESPN**, so the sync is capped at a
 dozen rosters a run and works oldest-first. A club whose roster is a day old is
 invisible; a queue worker killed by its own traffic is not.
 
@@ -63,6 +63,10 @@ that endpoint from its own upstream calls, and one athlete with a missing record
 takes a whole club's roster down with a 404 — seen live on one NFL club while
 the other thirty-one answered. Without the stamp that club is retried first on
 every run for ever, and no other club is ever reached.
+
+## For developers
+
+The data is served as JSON:API resources: `GET /api/roster-teams?filter[league]=nfl`, `GET /api/roster-teams/{slug}?include=players` and `GET /api/roster-players/{slug}?include=team`.
 
 ## Requires
 

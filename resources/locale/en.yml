@@ -2,11 +2,19 @@ ernestdefoe-roster:
   forum:
     title: Roster
     intro: Every team, roster and player. Pick a club to see who is on it.
-    empty: Nothing has been synced yet. An administrator picks the leagues to carry, and the fixtures arrive on the next hourly sync.
+    empty: Nothing has been synced yet. An administrator picks the leagues to carry, and the rosters arrive on the next hourly sync.
     no_team: There is no club at this address.
     no_roster: No roster has been fetched for this club yet.
 
     team_count: "{count, plural, one {# team} other {# teams}}"
+
+    meta:
+      index_title: Rosters
+      team_title: "{team} roster"
+
+    crests:
+      programs: "{count, plural, one {<b>#</b> program} other {<b>#</b> programs}}"
+      players: "{count, plural, one {<b>#</b> player} other {<b>#</b> players}}"
 
     jersey: "No."
     player: Player
@@ -17,8 +25,8 @@ ernestdefoe-roster:
     hometown: Hometown
 
     group:
-      offense: Offence
-      defense: Defence
+      offense: Offense
+      defense: Defense
       specialists: Specialists
       other: Other
 
@@ -42,6 +50,7 @@ ernestdefoe-roster:
       news: News
       espn_profile: Full profile on ESPN
       nothing_yet: Nothing has been written about this player yet. His stats, clips and news appear here as they're published.
+      gathering: Gathering his stats, clips and news…
 
     class_year:
       freshman: Freshman
@@ -49,6 +58,19 @@ ernestdefoe-roster:
       junior: Junior
       senior: Senior
       super_senior: Super senior
+
+  api:
+    independent: Independent
+    crest_wall:
+      name: Crest wall
+      league_label: League key
+      league_help: Which competition's clubs to show — cfb, nfl, nba…
+      caption_label: Caption
+      caption_default: Every program in the country
+      caption_help: Leave empty for no caption.
+      counts_label: Show the numbers
+      counts_help: Programs and players actually held, counted at render — never a number typed in by hand.
+      rows_label: Rows
 
   admin:
     leagues_label: Leagues to carry

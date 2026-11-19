@@ -1,8 +1,6 @@
 import app from 'flarum/admin/app';
 import Component from 'flarum/common/Component';
 
-declare const m: any;
-
 const t = (k: string) => app.translator.trans('ernestdefoe-roster.admin.' + k);
 
 interface Attrs {

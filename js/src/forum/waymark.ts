@@ -11,6 +11,8 @@ import app from 'flarum/forum/app';
 type Crumb = { label: any; href?: string } | null;
 
 export function hasWaymark(): boolean {
+  if (!('ernestdefoe-waymark' in flarum.extensions)) return false;
+
   const w = (app as any).waymark;
   return !!(w && w.render) && app.forum.attribute('waymarkOther') !== false;
 }

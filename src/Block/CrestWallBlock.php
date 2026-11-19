@@ -7,6 +7,7 @@ namespace ErnestDefoe\Roster\Block;
 use Ernestdefoe\PageBuilder\Block\AbstractBlock;
 use ErnestDefoe\Roster\Player;
 use ErnestDefoe\Roster\Team;
+use Flarum\Locale\TranslatorInterface;
 use Flarum\User\User;
 
 /**
@@ -18,6 +19,15 @@ use Flarum\User\User;
  */
 class CrestWallBlock extends AbstractBlock
 {
+    public function __construct(protected TranslatorInterface $translator)
+    {
+    }
+
+    private function t(string $key): string
+    {
+        return $this->translator->trans('ernestdefoe-roster.api.crest_wall.'.$key);
+    }
+
     public function type(): string
     {
         return 'roster-crests';
@@ -25,7 +35,7 @@ class CrestWallBlock extends AbstractBlock
 
     public function name(): string
     {
-        return 'Crest wall';
+        return $this->t('name');
     }
 
     public function icon(): string
@@ -41,16 +51,10 @@ class CrestWallBlock extends AbstractBlock
     public function settingsSchema(): array
     {
         return [
-            ['key' => 'league', 'type' => 'text', 'label' => 'League key', 'default' => 'cfb', 'help' => 'Which competition\'s clubs to show — cfb, nfl, nba…'],
-            ['key' => 'caption', 'type' => 'text', 'label' => 'Caption', 'default' => 'Every program in the country', 'help' => 'Leave empty for no caption.'],
-            [
-                'key' => 'show_counts',
-                'type' => 'toggle',
-                'label' => 'Show the numbers',
-                'default' => true,
-                'help' => 'Programs and players actually held, counted at render — never a number typed in by hand.',
-            ],
-            ['key' => 'rows', 'type' => 'range', 'label' => 'Rows', 'default' => 2, 'min' => 1, 'max' => 3],
+            ['key' => 'league', 'type' => 'text', 'label' => $this->t('league_label'), 'default' => 'cfb', 'help' => $this->t('league_help')],
+            ['key' => 'caption', 'type' => 'text', 'label' => $this->t('caption_label'), 'default' => $this->t('caption_default'), 'help' => $this->t('caption_help')],
+            ['key' => 'show_counts', 'type' => 'toggle', 'label' => $this->t('counts_label'), 'default' => true, 'help' => $this->t('counts_help')],
+            ['key' => 'rows', 'type' => 'range', 'label' => $this->t('rows_label'), 'default' => 2, 'min' => 1, 'max' => 3],
         ];
     }
 

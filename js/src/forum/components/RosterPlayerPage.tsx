@@ -6,8 +6,8 @@ import humanTime from 'flarum/common/helpers/humanTime';
 import { hasWaymark, trail, teamsCrumb } from '../waymark';
 import crestUrl from '../crest';
 import type Mithril from 'mithril';
-
-declare const m: any;
+import type Player from '../models/Player';
+import type Team from '../models/Team';
 
 const t = (key: string, params?: any) => app.translator.trans(`ernestdefoe-roster.forum.player_page.${key}`, params);
 
@@ -22,8 +22,15 @@ const t = (key: string, params?: any) => app.translator.trans(`ernestdefoe-roste
  */
 export default class RosterPlayerPage extends Page {
   loading = true;
-  data: any = null;
+  player: Player | null = null;
   playing: string | null = null;
+  /** Times this page has asked again for a profile that was still being gathered. */
+  retries = 0;
+  retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** A profile is gathered on the queue; the page asks again this often, this many times. */
+  static readonly RETRY_MS = 4000;
+  static readonly MAX_RETRIES = 4;
 
   oninit(vnode: any) {
     super.oninit(vnode);
@@ -32,41 +39,60 @@ export default class RosterPlayerPage extends Page {
 
   onbeforeupdate(vnode: any) {
     // Moving between players without leaving the page.
-    if (this.data && this.data.player.slug !== m.route.param('player')) this.load();
+    if (this.player && this.player.slug() !== m.route.param('player')) this.load();
   }
 
-  load() {
-    this.loading = true;
-    this.playing = null;
+  onremove(vnode: any) {
+    super.onremove(vnode);
+    if (this.retryTimer) clearTimeout(this.retryTimer);
+  }
 
-    app
-      .request({
-        method: 'GET',
-        url: `${app.forum.attribute('apiUrl')}/roster/player`,
-        params: { slug: m.route.param('player') },
-      })
-      .then((data: any) => {
-        this.data = data;
-        this.loading = false;
-        app.setTitle(data.player.name);
-        app.history.push('roster.player', data.player.name);
-        m.redraw();
+  load(again = false) {
+    if (!again) {
+      this.loading = true;
+      this.playing = null;
+      this.retries = 0;
+    }
+
+    app.store
+      .find<Player>('roster-players', m.route.param('player'), { include: 'team' })
+      .then((player) => {
+        this.player = player;
+        app.setTitle(player.name());
+        if (!again) app.history.push('roster.player', player.name());
+        this.askAgainIfPending();
       })
       .catch(() => {
-        this.data = null;
+        // A slug with no player: the page says so below.
+        if (!again) this.player = null;
+      })
+      .finally(() => {
         this.loading = false;
         m.redraw();
       });
   }
 
+  /** While the queue is still gathering his profile, look again shortly. */
+  askAgainIfPending() {
+    if (!this.player?.profile()?.pending || this.retries >= RosterPlayerPage.MAX_RETRIES) return;
+
+    this.retries++;
+    this.retryTimer = setTimeout(() => this.load(true), RosterPlayerPage.RETRY_MS);
+  }
+
   view() {
-    if (this.loading)
+    const player = this.player;
+    const team = player?.team();
+
+    if (this.loading) {
       return (
         <div className="RosterPage">
           <LoadingIndicator />
         </div>
       );
-    if (!this.data) {
+    }
+
+    if (!player || !team) {
       return (
         <div className="RosterPage">
           <div className="container">
@@ -76,91 +102,112 @@ export default class RosterPlayerPage extends Page {
       );
     }
 
-    const { player, team, profile } = this.data;
-    const bio = profile.bio || {};
-    const photo = bio.headshot || player.photo || null;
-    const teamHref = app.route('roster.team', { slug: team.slug });
+    const color = clubColor(team.color());
+    const teamHref = app.route('roster.team', { slug: team.slug() });
 
     return (
       <div
-        className={'RosterPage RosterPage--player' + (isLight(clubColor(team.color)) ? ' RosterPage--lightClub' : '')}
-        style={clubColor(team.color) ? { '--roster-team': clubColor(team.color) } : undefined}
+        className={'RosterPage RosterPage--player' + (isLight(color) ? ' RosterPage--lightClub' : '')}
+        style={color ? { '--roster-team': color } : undefined}
       >
         {hasWaymark() ? (
-          trail([teamsCrumb(), { label: team.name, href: teamHref }, { label: player.name }])
+          trail([teamsCrumb(), { label: team.name(), href: teamHref }, { label: player.name() }])
         ) : (
           <div className="container">
             <Link className="RosterTeam-back" href={teamHref}>
-              {team.name}
+              {team.name()}
             </Link>
           </div>
         )}
 
-        <header className="RosterPlayer-hero">
-          <div className="container RosterPlayer-heroInner">
-            <div className="RosterPlayer-photo">
-              {photo ? <img src={photo} alt="" loading="lazy" /> : <span className="RosterPlayer-initials">{initials(player.name)}</span>}
-            </div>
-
-            <div className="RosterPlayer-identity">
-              <Link className="RosterPlayer-team" href={teamHref}>
-                {team.logo ? <img src={crestUrl(team.logo, 26)} alt="" /> : null}
-                {team.name}
-              </Link>
-              <h1>{player.name}</h1>
-              <p className="RosterPlayer-line">
-                {[bio.jersey || (player.jersey !== null && player.jersey !== undefined ? '#' + player.jersey : null), bio.position || player.position]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </p>
-            </div>
-          </div>
-        </header>
-
-        <div className="container RosterPlayer-body">
-          <dl className="RosterPlayer-facts">
-            {fact(t('height'), bio.height || player.height)}
-            {fact(t('weight'), bio.weight || (player.weight ? `${player.weight} lbs` : null))}
-            {fact(t('class'), bio.experience)}
-            {fact(t('hometown'), bio.birthPlace || player.hometown)}
-            {fact(t('age'), bio.age)}
-            {fact(t('status'), bio.status)}
-          </dl>
-
-          {profile.nextGame ? (
-            <p className="RosterPlayer-next">
-              <strong>{t('next_game')}</strong> {profile.nextGame.name}
-              {profile.nextGame.date ? <span> · {formatDate(profile.nextGame.date)}</span> : null}
-            </p>
-          ) : null}
-
-          {profile.about ? this.about(profile.about) : null}
-          {profile.videos && profile.videos.length ? this.videos(profile.videos) : null}
-          {profile.stats
-            ? this.table(
-                t('career'),
-                profile.stats.labels,
-                profile.stats.names,
-                profile.stats.rows.map((r: any) => [r.label, ...r.values])
-              )
-            : null}
-          {profile.games ? this.recentGames(profile.games) : null}
-          {profile.news && profile.news.length ? this.news(profile.news) : null}
-
-          {!profile.about && !profile.stats && !(profile.videos || []).length && !(profile.news || []).length ? (
-            <p className="RosterPage-empty">{t('nothing_yet')}</p>
-          ) : null}
-
-          {profile.espnUrl ? (
-            <p className="RosterPlayer-source">
-              <a href={profile.espnUrl} target="_blank" rel="noopener noreferrer">
-                {t('espn_profile')}
-              </a>
-            </p>
-          ) : null}
-        </div>
+        {this.hero(player, team, teamHref)}
+        {this.body(player, player.profile() || {})}
       </div>
     );
+  }
+
+  hero(player: Player, team: Team, teamHref: string) {
+    const bio = player.profile()?.bio || {};
+    const photo = bio.headshot || player.photo() || null;
+    const jersey = player.jersey();
+
+    return (
+      <header className="RosterPlayer-hero">
+        <div className="container RosterPlayer-heroInner">
+          <div className="RosterPlayer-photo">
+            {photo ? <img src={photo} alt="" loading="lazy" /> : <span className="RosterPlayer-initials">{initials(player.name())}</span>}
+          </div>
+
+          <div className="RosterPlayer-identity">
+            <Link className="RosterPlayer-team" href={teamHref}>
+              {team.logo() ? <img src={crestUrl(team.logo()!, 26)} alt="" /> : null}
+              {team.name()}
+            </Link>
+            <h1>{player.name()}</h1>
+            <p className="RosterPlayer-line">
+              {[bio.jersey || (jersey !== null && jersey !== undefined ? '#' + jersey : null), bio.position || player.position()]
+                .filter(Boolean)
+                .join(' · ')}
+            </p>
+          </div>
+        </div>
+      </header>
+    );
+  }
+
+  body(player: Player, profile: Record<string, any>) {
+    const bio = profile.bio || {};
+    const weight = player.weight();
+    const empty = !profile.about && !profile.stats && !(profile.videos || []).length && !(profile.news || []).length;
+
+    return (
+      <div className="container RosterPlayer-body">
+        <dl className="RosterPlayer-facts">
+          {fact(t('height'), bio.height || player.height())}
+          {fact(t('weight'), bio.weight || (weight ? `${weight} lbs` : null))}
+          {fact(t('class'), bio.experience)}
+          {fact(t('hometown'), bio.birthPlace || player.hometown())}
+          {fact(t('age'), bio.age)}
+          {fact(t('status'), bio.status)}
+        </dl>
+
+        {profile.nextGame ? (
+          <p className="RosterPlayer-next">
+            <strong>{t('next_game')}</strong> {profile.nextGame.name}
+            {profile.nextGame.date ? <span> · {formatDate(profile.nextGame.date)}</span> : null}
+          </p>
+        ) : null}
+
+        {this.sections(profile)}
+
+        {empty ? <p className="RosterPage-empty">{profile.pending ? t('gathering') : t('nothing_yet')}</p> : null}
+
+        {profile.espnUrl ? (
+          <p className="RosterPlayer-source">
+            <a href={profile.espnUrl} target="_blank" rel="noopener noreferrer">
+              {t('espn_profile')}
+            </a>
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
+  sections(profile: Record<string, any>) {
+    return [
+      profile.about ? this.about(profile.about) : null,
+      profile.videos && profile.videos.length ? this.videos(profile.videos) : null,
+      profile.stats
+        ? this.table(
+            t('career'),
+            profile.stats.labels,
+            profile.stats.names,
+            profile.stats.rows.map((r: any) => [r.label, ...r.values])
+          )
+        : null,
+      profile.games ? this.recentGames(profile.games) : null,
+      profile.news && profile.news.length ? this.news(profile.news) : null,
+    ];
   }
 
   about(about: any) {

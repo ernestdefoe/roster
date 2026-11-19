@@ -28,10 +28,23 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $external_id
  * @property-read string|null $height_label
  * @property-read string|null $hometown
+ * @property-read string      $group
  * @property-read Team|null $team
  */
 class Player extends AbstractModel
 {
+    /**
+     * 🚨 The gridiron position order, used ONLY for gridiron. Every other sport
+     * arrives already grouped by the provider — Pitchers, Centers, Guards — and
+     * running a shortstop through a list of football positions returns "other"
+     * for every player on the team.
+     */
+    private const GRIDIRON = [
+        'offense' => ['QB', 'RB', 'FB', 'WR', 'TE', 'OL', 'OT', 'OG', 'C'],
+        'defense' => ['DL', 'DE', 'DT', 'NT', 'LB', 'ILB', 'OLB', 'EDGE', 'CB', 'S', 'DB', 'FS', 'SS'],
+        'specialists' => ['K', 'P', 'LS', 'PK', 'ATH'],
+    ];
+
     public $timestamps = true;
 
     protected $table = 'roster_players';
@@ -77,5 +90,25 @@ class Player extends AbstractModel
         $parts = array_filter([trim((string) $this->home_city), trim((string) $this->home_state)]);
 
         return $parts === [] ? null : implode(', ', $parts);
+    }
+
+    /** The group the provider gave, or the gridiron unit his position belongs to. */
+    public function getGroupAttribute(): string
+    {
+        $group = trim((string) $this->position_group);
+
+        if ($group !== '') {
+            return $group;
+        }
+
+        $position = strtoupper(trim((string) $this->position));
+
+        foreach (self::GRIDIRON as $unit => $positions) {
+            if (in_array($position, $positions, true)) {
+                return $unit;
+            }
+        }
+
+        return 'other';
     }
 }
