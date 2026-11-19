@@ -4,6 +4,7 @@ namespace ErnestDefoe\Roster\Api\Resource;
 
 use ErnestDefoe\Roster\Service\Leagues\Leagues;
 use ErnestDefoe\Roster\Team;
+use Flarum\Api\Context as FlarumContext;
 use Flarum\Api\Endpoint;
 use Flarum\Api\Resource\AbstractDatabaseResource;
 use Flarum\Api\Schema;
@@ -80,9 +81,15 @@ class TeamResource extends AbstractDatabaseResource
             Schema\Boolean::make('collegiate')
                 ->get(fn (Team $team) => $this->leagues->get($team->league)->collegiate),
 
+            /*
+             * 🚨 On a club's own page only. Includable on the list as well, one
+             * request could serialize every player of every club in a league
+             * — fifteen thousand for college football.
+             */
             Schema\Relationship\ToMany::make('players')
                 ->type('roster-players')
-                ->includable(),
+                ->includable()
+                ->visible(fn (Team $team, FlarumContext $context) => $context->showing(self::class)),
         ];
     }
 

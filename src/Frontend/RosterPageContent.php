@@ -41,21 +41,21 @@ class RosterPageContent
             return;
         }
 
-        $team = Team::query()->where('slug', $slug)->first();
+        // A player's own page: his name, then his club. Found by his slug alone,
+        // as the API finds him, so a link with an outdated club still works.
+        $playerSlug = (string) ($request->getQueryParams()['player'] ?? '');
+        $player = $playerSlug === '' ? null : Player::query()->with('team')->where('slug', $playerSlug)->first();
 
-        if ($team === null) {
+        if ($player !== null && $player->team !== null) {
+            $document->title = trim((string) $player->name).' — '.trim((string) $player->team->name);
+
             return;
         }
 
-        $name = trim((string) $team->name);
-        $document->title = $this->translator->trans('ernestdefoe-roster.forum.meta.team_title', ['team' => $name]);
+        $team = Team::query()->where('slug', $slug)->first();
 
-        // A player's own page: his name, then his club.
-        $playerSlug = (string) ($request->getQueryParams()['player'] ?? '');
-        $player = $playerSlug === '' ? null : Player::query()->where('slug', $playerSlug)->where('team_id', $team->id)->first();
-
-        if ($player !== null) {
-            $document->title = trim((string) $player->name).' — '.$name;
+        if ($team !== null) {
+            $document->title = $this->translator->trans('ernestdefoe-roster.forum.meta.team_title', ['team' => trim((string) $team->name)]);
         }
     }
 }

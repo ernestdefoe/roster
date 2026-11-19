@@ -7,7 +7,6 @@ use ErnestDefoe\Roster\Service\Leagues\League;
 use ErnestDefoe\Roster\Service\Leagues\Leagues;
 use ErnestDefoe\Roster\Service\Sources\EspnRoster;
 use ErnestDefoe\Roster\Team;
-use Flarum\Settings\SettingsRepositoryInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
@@ -36,7 +35,6 @@ class RosterSync
 
     public function __construct(
         protected EspnRoster $espn,
-        protected SettingsRepositoryInterface $settings,
         protected Leagues $leagues,
         protected HeldLeagues $held,
     ) {
@@ -45,7 +43,7 @@ class RosterSync
     /** @return array<string, int|string> a summary, for the command and for tests */
     public function run(): array
     {
-        $following = $this->following();
+        $following = $this->held->following();
 
         if ($following === []) {
             return ['skipped' => 'no leagues'];
@@ -96,31 +94,39 @@ class RosterSync
 
     protected function teams(League $league): int
     {
+        // Empty when ESPN failed to answer: the league keeps what it has.
         $clubs = $this->espn->teams($league);
 
         if ($clubs === []) {
             return 0;
         }
 
-        $divisions = $this->espn->divisions($league);
         $rows = [];
 
         foreach ($clubs as $club) {
-            $rows[(string) $club['external_id']] = $this->clubValues($league, $club, $divisions);
+            $rows[(string) $club['external_id']] = $this->clubValues($league, $club);
         }
 
         // One statement for the whole league, keyed on the provider's id.
         Team::query()->upsert(array_values($rows), ['league', 'external_id'], self::TEAM_UPDATES);
+
+        // A club the league no longer lists (relegated, or out of the
+        // division) leaves it, with its roster.
+        $gone = Team::query()->where('league', $league->key)->whereNotIn('external_id', array_map('strval', array_keys($rows)))->pluck('id')->all();
+
+        if ($gone !== []) {
+            Player::query()->whereIn('team_id', $gone)->delete();
+            Team::query()->whereIn('id', $gone)->delete();
+        }
 
         return count($rows);
     }
 
     /**
      * @param array<string, mixed> $club
-     * @param array<string, string> $divisions
      * @return array<string, mixed>
      */
-    protected function clubValues(League $league, array $club, array $divisions): array
+    protected function clubValues(League $league, array $club): array
     {
         return [
             'league' => $league->key,
@@ -128,7 +134,7 @@ class RosterSync
             'name' => Str::limit((string) $club['school'], 189, ''),
             'mascot' => Str::limit((string) $club['mascot'], 119, ''),
             'abbreviation' => Str::limit((string) $club['abbreviation'], 15, ''),
-            'conference' => $divisions[$club['external_id']] ?? '',
+            'conference' => Str::limit((string) $club['conference'], 99, ''),
             'color' => Str::limit((string) $club['color'], 15, ''),
             'logo' => (string) $club['logo'],
             'logo_dark' => (string) $club['logo_dark'],
@@ -232,6 +238,11 @@ class RosterSync
         // run of twelve clubs was well over a thousand queries every hour.
         Player::query()->upsert(array_values($rows), ['league', 'external_id'], self::PLAYER_UPDATES);
 
+        // Released, graduated or traded: whoever this club no longer lists
+        // leaves its roster. Only after a roster came back, so a failed fetch
+        // never empties a club.
+        Player::query()->where('team_id', $team->id)->whereNotIn('external_id', array_map('strval', array_keys($rows)))->delete();
+
         return count($rows);
     }
 
@@ -265,33 +276,6 @@ class RosterSync
     }
 
     /* --------------------------------------------------------------- naming */
-
-    /** @return list<string> the league keys this site follows */
-    protected function following(): array
-    {
-        $raw = trim((string) $this->settings->get('ernestdefoe-roster.leagues'));
-
-        if ($raw === '') {
-            return [];
-        }
-
-        $out = [];
-
-        foreach (explode(',', $raw) as $key) {
-            $key = trim($key);
-
-            /*
-             * Every league here is one somebody ticked. College football used
-             * to be excluded by name — see the note in Leagues — which left it
-             * permanently on and permanently empty at the same time.
-             */
-            if ($key !== '' && $this->leagues->has($key)) {
-                $out[$key] = $key;
-            }
-        }
-
-        return array_values($out);
-    }
 
     protected function slug(League $league, string $value): string
     {

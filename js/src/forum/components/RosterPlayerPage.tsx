@@ -37,11 +37,6 @@ export default class RosterPlayerPage extends Page {
     this.load();
   }
 
-  onbeforeupdate(vnode: any) {
-    // Moving between players without leaving the page.
-    if (this.player && this.player.slug() !== m.route.param('player')) this.load();
-  }
-
   onremove(vnode: any) {
     super.onremove(vnode);
     if (this.retryTimer) clearTimeout(this.retryTimer);

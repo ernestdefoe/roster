@@ -5,10 +5,8 @@ namespace ErnestDefoe\Roster\Service;
 use ErnestDefoe\Roster\Player;
 use ErnestDefoe\Roster\Service\Leagues\Leagues;
 use ErnestDefoe\Roster\Team;
-use GuzzleHttp\Client as HttpClient;
+use ErnestDefoe\Roster\Service\Http\JsonFetcher;
 use Illuminate\Contracts\Cache\Repository as Cache;
-use Psr\Log\LoggerInterface;
-use Throwable;
 
 /**
  * Everything worth knowing about one player, gathered from outside and cached.
@@ -36,10 +34,9 @@ class PlayerProfile
     private const STALE_TTL = 14 * 86400;
 
     public function __construct(
-        protected HttpClient $http,
+        protected JsonFetcher $fetcher,
         protected Cache $cache,
         protected Leagues $leagues,
-        protected LoggerInterface $log,
     ) {
     }
 
@@ -166,7 +163,7 @@ class PlayerProfile
     private function bio(array $a): array
     {
         return array_filter([
-            'headshot' => self::web($a['headshot']['href'] ?? null),
+            'headshot' => JsonFetcher::web($a['headshot']['href'] ?? null),
             'jersey' => $a['displayJersey'] ?? null,
             'position' => $a['position']['displayName'] ?? null,
             'height' => $a['displayHeight'] ?? null,
@@ -229,7 +226,7 @@ class PlayerProfile
                 'date' => $event['gameDate'] ?? null,
                 'atVs' => $event['atVs'] ?? '',
                 'opponent' => $event['opponent']['abbreviation'] ?? ($event['opponent']['displayName'] ?? ''),
-                'opponentLogo' => self::web($event['opponent']['logo'] ?? null),
+                'opponentLogo' => JsonFetcher::web($event['opponent']['logo'] ?? null),
                 'result' => $event['gameResult'] ?? '',
                 'score' => $event['score'] ?? '',
                 'values' => array_values($line['stats'] ?? []),
@@ -288,9 +285,9 @@ class PlayerProfile
                 'id' => $m[1],
                 'title' => (string) ($item['headline'] ?? ''),
                 'description' => (string) ($item['description'] ?? ''),
-                'image' => self::web($item['images'][0]['url'] ?? null),
+                'image' => JsonFetcher::web($item['images'][0]['url'] ?? null),
                 'published' => $item['published'] ?? ($item['lastModified'] ?? null),
-                'url' => self::web($web),
+                'url' => JsonFetcher::web($web),
             ];
 
             if (count($out) >= 8) {
@@ -311,7 +308,7 @@ class PlayerProfile
                 continue;
             }
 
-            $url = self::web($item['links']['web']['href'] ?? null);
+            $url = JsonFetcher::web($item['links']['web']['href'] ?? null);
             if (! $url || empty($item['headline'])) {
                 continue;
             }
@@ -319,7 +316,7 @@ class PlayerProfile
             $out[] = [
                 'title' => (string) $item['headline'],
                 'description' => (string) ($item['description'] ?? ''),
-                'image' => self::web($item['images'][0]['url'] ?? null),
+                'image' => JsonFetcher::web($item['images'][0]['url'] ?? null),
                 'published' => $item['published'] ?? ($item['lastModified'] ?? null),
                 'url' => $url,
             ];
@@ -336,11 +333,11 @@ class PlayerProfile
     {
         foreach ($links as $link) {
             if (in_array('playercard', $link['rel'] ?? [], true) && ! empty($link['href'])) {
-                return self::web($link['href']);
+                return JsonFetcher::web($link['href']);
             }
         }
 
-        return self::web($links[0]['href'] ?? null);
+        return JsonFetcher::web($links[0]['href'] ?? null);
     }
 
     /**
@@ -350,8 +347,8 @@ class PlayerProfile
      * this season and more on Wikipedia, and a confident paragraph about the
      * wrong man is worse than no paragraph. An article is only accepted when
      * its title is the player's name (or "Name (American football)"-style) AND
-     * its summary names his school AND says football. Anything less, and the
-     * page simply has no "About" section.
+     * its summary names his club AND his sport. Anything less, and the page
+     * simply has no "About" section.
      *
      * @return array<string, mixed>|null
      */
@@ -382,17 +379,18 @@ class PlayerProfile
     private function findWikipedia(string $name, Team $team): ?array
     {
         $school = trim((string) $team->name);
-        if ($name === '' || $school === '') {
+        $sport = $this->leagues->get($team->league)->sport;
+        if ($name === '' || $school === '' || $sport === '') {
             return null;
         }
 
         $search = $this->json(self::WIKI.'/w/api.php', [
             'action' => 'query',
             'list' => 'search',
-            'srsearch' => '"'.$name.'" '.$school.' football',
+            'srsearch' => '"'.$name.'" '.$school.' '.$sport,
             'srlimit' => 4,
             'format' => 'json',
-        ], true);
+        ]);
 
         foreach ($search['query']['search'] ?? [] as $hit) {
             $title = (string) ($hit['title'] ?? '');
@@ -402,22 +400,22 @@ class PlayerProfile
                 continue;
             }
 
-            $summary = $this->json(self::WIKI.'/api/rest_v1/page/summary/'.rawurlencode(str_replace(' ', '_', $title)), [], true);
+            $summary = $this->json(self::WIKI.'/api/rest_v1/page/summary/'.rawurlencode(str_replace(' ', '_', $title)));
             $extract = (string) ($summary['extract'] ?? '');
 
             if ($extract === '' || ($summary['type'] ?? '') === 'disambiguation') {
                 continue;
             }
 
-            if (stripos($extract, $school) === false || stripos($extract, 'football') === false) {
+            if (stripos($extract, $school) === false || stripos($extract, $sport) === false) {
                 continue;
             }
 
             return [
                 'title' => $title,
                 'extract' => $extract,
-                'url' => self::web($summary['content_urls']['desktop']['page'] ?? null) ?? (self::WIKI.'/wiki/'.rawurlencode(str_replace(' ', '_', $title))),
-                'image' => self::web($summary['thumbnail']['source'] ?? null),
+                'url' => JsonFetcher::web($summary['content_urls']['desktop']['page'] ?? null) ?? (self::WIKI.'/wiki/'.rawurlencode(str_replace(' ', '_', $title))),
+                'image' => JsonFetcher::web($summary['thumbnail']['source'] ?? null),
             ];
         }
 
@@ -425,53 +423,11 @@ class PlayerProfile
     }
 
     /**
-     * A link or image from a feed, only if it is plain http(s). These land in
-     * href and src on the player page, so a feed that ever carried a
-     * javascript: or data: address must not pass it through.
-     */
-    private static function web(mixed $url): ?string
-    {
-        return is_string($url) && preg_match('#^https?://[^\s"\'<>]+$#i', $url) ? $url : null;
-    }
-
-    /**
      * @param array<string, mixed> $query
      * @return array<string, mixed>|null
      */
-    private function json(string $url, array $query = [], bool $wikipedia = false): ?array
+    private function json(string $url, array $query = []): ?array
     {
-        try {
-            $response = $this->http->get($url, [
-                'query' => $query,
-                'timeout' => self::TIMEOUT,
-                'connect_timeout' => 4,
-                'http_errors' => false,
-                'headers' => [
-                    'Accept' => 'application/json',
-                    /*
-                     * 🚨 Two different rules. ESPN answers 403 to a CUSTOM user
-                     * agent and accepts curl's; Wikipedia asks every client to
-                     * identify itself with a way to reach its author, and
-                     * throttles anonymous ones.
-                     */
-                    'User-Agent' => $wikipedia
-                        ? 'FlarumRoster/1.2 (https://github.com/ernestdefoe/roster)'
-                        : 'curl/8',
-                ],
-            ]);
-
-            if ($response->getStatusCode() !== 200) {
-                return null;
-            }
-
-            $data = json_decode((string) $response->getBody(), true);
-
-            return is_array($data) ? $data : null;
-        } catch (Throwable $e) {
-            // A provider outage costs this section, not the page.
-            $this->log->warning('[roster] profile fetch failed: '.$url.' '.$e->getMessage());
-
-            return null;
-        }
+        return $this->fetcher->get($url, $query, self::TIMEOUT);
     }
 }

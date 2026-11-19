@@ -35,15 +35,15 @@ class Leagues
          * grouped shape it uses for the NFL, and it carries the class year —
          * which is the one thing the collegiate flag is about.
          */
-        $this->register(new League('cfb', 'College football', 'espn', 'football/college-football', true));
+        $this->register(new League('cfb', 'College football', 'espn', 'football/college-football', collegiate: true, sport: 'football'));
 
-        $this->register(new League('nfl', 'NFL', 'espn', 'football/nfl'));
-        $this->register(new League('nba', 'NBA', 'espn', 'basketball/nba'));
-        $this->register(new League('mlb', 'MLB', 'espn', 'baseball/mlb'));
-        $this->register(new League('nhl', 'NHL', 'espn', 'hockey/nhl'));
-        $this->register(new League('mls', 'MLS', 'espn', 'soccer/usa.1'));
-        $this->register(new League('epl', 'Premier League', 'espn', 'soccer/eng.1'));
-        $this->register(new League('wnba', 'WNBA', 'espn', 'basketball/wnba'));
+        $this->register(new League('nfl', 'NFL', 'espn', 'football/nfl', sport: 'football'));
+        $this->register(new League('nba', 'NBA', 'espn', 'basketball/nba', sport: 'basketball'));
+        $this->register(new League('mlb', 'MLB', 'espn', 'baseball/mlb', sport: 'baseball'));
+        $this->register(new League('nhl', 'NHL', 'espn', 'hockey/nhl', sport: 'hockey'));
+        $this->register(new League('mls', 'MLS', 'espn', 'soccer/usa.1', sport: 'soccer'));
+        $this->register(new League('epl', 'Premier League', 'espn', 'soccer/eng.1', sport: 'football'));
+        $this->register(new League('wnba', 'WNBA', 'espn', 'basketball/wnba', sport: 'basketball'));
     }
 
     public function register(League $league): void

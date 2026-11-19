@@ -3,9 +3,7 @@
 namespace ErnestDefoe\Roster\Service\Sources;
 
 use ErnestDefoe\Roster\Service\Leagues\League;
-use GuzzleHttp\Client as HttpClient;
-use Psr\Log\LoggerInterface;
-use Throwable;
+use ErnestDefoe\Roster\Service\Http\JsonFetcher;
 
 /**
  * ESPN's team, standings and roster endpoints, for every league this extension
@@ -41,10 +39,8 @@ class EspnRoster
     /** @var array<string, array<string, string>> league key => id => division */
     private array $divisionCache = [];
 
-    public function __construct(
-        protected HttpClient $http,
-        protected LoggerInterface $log,
-    ) {
+    public function __construct(protected JsonFetcher $fetcher)
+    {
     }
 
     public function supports(League $league): bool
@@ -84,6 +80,16 @@ class EspnRoster
          */
         $scope = $this->divisions($league);
 
+        /*
+         * 🚨 A FAILED standings call is not an empty one. Read as "this league
+         * has no divisions", it took every club ESPN has — seven hundred
+         * college programmes down to Division III — so the league is skipped
+         * for this run instead.
+         */
+        if ($scope === null) {
+            return [];
+        }
+
         $out = [];
 
         foreach ($rows as $row) {
@@ -108,7 +114,7 @@ class EspnRoster
      * them. The symptom was a site missing its most famous team while carrying
      * Adams State, and nothing anywhere said the list had been cut.
      *
-     * @return list<mixed>
+     * @return list<mixed> empty when any page failed
      */
     private function teamPages(League $league): array
     {
@@ -116,6 +122,13 @@ class EspnRoster
 
         for ($page = 1; $page <= self::MAX_TEAM_PAGES; $page++) {
             $body = $this->get($league->espnPath.'/teams', ['limit' => '400', 'page' => (string) $page]);
+
+            // A failed page is a failed list: half a league read as all of it
+            // would remove the clubs on the missing page.
+            if ($body === null) {
+                return [];
+            }
+
             $chunk = $body['sports'][0]['leagues'][0]['teams'] ?? [];
 
             if (! is_array($chunk) || $chunk === []) {
@@ -159,16 +172,16 @@ class EspnRoster
             'slug' => (string) ($team['slug'] ?? ''),
             'abbreviation' => (string) ($team['abbreviation'] ?? ''),
             'color' => (string) ($team['color'] ?? ''),
-            'alt_color' => (string) ($team['alternateColor'] ?? ''),
             'logo' => $this->logo($team, false),
             'logo_dark' => $this->logo($team, true),
             /*
-             * 🚨 The division, where ESPN gives one. It is what the index
-             * groups by, and a professional league without it renders as one
-             * long ungrouped list — which is correct for the Premier League and
-             * wrong for the NFL.
+             * 🚨 The division from the standings where they name one, else the
+             * group the club list carries. It is what the index groups by, and
+             * a professional league without it renders as one long ungrouped
+             * list — which is correct for the Premier League and wrong for the
+             * NFL.
              */
-            'conference' => $this->conference($team),
+            'conference' => $scope[(string) $team['id']] ?? $this->conference($team),
         ];
     }
 
@@ -186,9 +199,9 @@ class EspnRoster
      * nothing, which is right for the Premier League and wrong only if it were
      * pretended otherwise.
      *
-     * @return array<string, string> ESPN team id => division name
+     * @return array<string, string>|null ESPN team id => division name; null when the call failed
      */
-    public function divisions(League $league): array
+    public function divisions(League $league): ?array
     {
         if (! $this->supports($league)) {
             return [];
@@ -208,7 +221,7 @@ class EspnRoster
 
         if ($body === null) {
             // Not cached: a failed call is worth retrying, unlike an empty answer.
-            return [];
+            return null;
         }
 
         return $this->divisionCache[$league->key] = $this->divisionMap($body);
@@ -384,7 +397,7 @@ class EspnRoster
             'home_country' => (string) ($birthPlace['country'] ?? ''),
             'college' => (string) ($this->section($athlete, 'college')['name'] ?? ''),
             'class_year' => $this->classYear($athlete['experience'] ?? null),
-            'headshot' => (string) ($this->section($athlete, 'headshot')['href'] ?? ''),
+            'headshot' => (string) JsonFetcher::web($this->section($athlete, 'headshot')['href'] ?? null),
         ];
     }
 
@@ -504,7 +517,7 @@ class EspnRoster
             $isDark = in_array('dark', (array) ($logo['rel'] ?? []), true);
 
             if ($isDark === $dark) {
-                return (string) ($logo['href'] ?? '');
+                return (string) JsonFetcher::web($logo['href'] ?? null);
             }
         }
 
@@ -518,42 +531,6 @@ class EspnRoster
      */
     private function get(string $path, array $params, string $base = self::BASE): ?array
     {
-        /*
-         * 🚨 A User-Agent, because ESPN answers 403 to a request that sends
-         * none. Guzzle sends its own by default — unlike PHP's bare cURL, which
-         * sends nothing unless told — but it is set explicitly so the reason
-         * survives a refactor. That trap cost the Convoro build of this an
-         * afternoon and Picks a whole season of live scores.
-         */
-        try {
-            $response = $this->http->get($base.'/'.ltrim($path, '/'), [
-                'query' => $params,
-                'timeout' => self::TIMEOUT,
-                'connect_timeout' => 5,
-                'headers' => [
-                    'Accept' => 'application/json',
-                    'User-Agent' => 'curl/8',
-                ],
-                'http_errors' => false,
-            ]);
-        } catch (Throwable $e) {
-            /*
-             * 🚨 A network failure (DNS, timeout, refused connection) is an
-             * empty answer for this call, not the end of the run. Thrown, it
-             * aborted the whole hourly sync and left every other league
-             * unrefreshed until the next tick.
-             */
-            $this->log->warning('[roster] ESPN request failed: '.$path.' '.$e->getMessage());
-
-            return null;
-        }
-
-        if ($response->getStatusCode() !== 200) {
-            return null;
-        }
-
-        $body = json_decode((string) $response->getBody(), true);
-
-        return is_array($body) ? $body : null;
+        return $this->fetcher->get($base.'/'.ltrim($path, '/'), $params, self::TIMEOUT);
     }
 }

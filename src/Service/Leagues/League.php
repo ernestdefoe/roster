@@ -23,6 +23,8 @@ class League
          * concept the sport lacks.
          */
         public readonly bool $collegiate = false,
+        /** The sport's word as Wikipedia writes it, to tell his article from a namesake's. */
+        public readonly string $sport = '',
     ) {
     }
 }

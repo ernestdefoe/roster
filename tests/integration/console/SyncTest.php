@@ -101,6 +101,44 @@ class SyncTest extends TestCase
     }
 
     #[Test]
+    public function a_failed_standings_call_keeps_the_league_as_it_is()
+    {
+        $this->espn([
+            '/football/nfl/teams' => ['sports' => [['leagues' => [['teams' => [$this->team('3', 'Chicago Bears')]]]]]],
+        ]);
+
+        $this->sync();
+
+        $this->assertSame(0, $this->database()->table('roster_teams')->count(), 'No club taken unscoped from a league whose divisions are unknown');
+    }
+
+    #[Test]
+    public function clubs_and_players_the_league_no_longer_lists_leave_it()
+    {
+        $standings = ['children' => [['name' => 'NFC North', 'standings' => ['entries' => [['team' => ['id' => '3']], ['team' => ['id' => '8']]]]]]];
+        $this->espn([
+            '/football/nfl/teams' => ['sports' => [['leagues' => [['teams' => [$this->team('3', 'Chicago Bears'), $this->team('8', 'Detroit Lions')]]]]]],
+            '/football/nfl/standings' => $standings,
+            '/teams/3/roster' => ['athletes' => [$this->athlete('77', 'Caleb Williams', 2), $this->athlete('78', 'Cut Player', 1)]],
+            '/teams/8/roster' => ['athletes' => [$this->athlete('88', 'Jared Goff', 5)]],
+        ]);
+        $this->sync();
+        $this->assertSame(3, $this->database()->table('roster_players')->count());
+
+        $db = $this->database();
+        $db->table('roster_teams')->update(['roster_at' => null]);
+        $this->espn([
+            '/football/nfl/teams' => ['sports' => [['leagues' => [['teams' => [$this->team('3', 'Chicago Bears')]]]]]],
+            '/football/nfl/standings' => $standings,
+            '/teams/3/roster' => ['athletes' => [$this->athlete('77', 'Caleb Williams', 2)]],
+        ]);
+        $this->sync();
+
+        $this->assertSame(['3'], $db->table('roster_teams')->pluck('external_id')->all());
+        $this->assertSame(['77'], $db->table('roster_players')->pluck('external_id')->all());
+    }
+
+    #[Test]
     public function never_fetched_clubs_come_before_stale_ones()
     {
         $this->prepareDatabase([

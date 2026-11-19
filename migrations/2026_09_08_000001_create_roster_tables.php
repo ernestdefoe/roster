@@ -59,7 +59,7 @@ return [
             $table->index('conference');
             // 🚨 NULLs are distinct in a MySQL unique index, so every club that
             // has no provider id coexists happily under this.
-            $table->unique(['league', 'external_id'], 'roster_teams_external');
+            $table->unique(['league', 'external_id']);
         });
 
         $schema->create('roster_players', function (Blueprint $table) {
@@ -104,7 +104,7 @@ return [
 
             $table->index('team_id');
             $table->index('name');
-            $table->unique(['league', 'external_id'], 'roster_players_external');
+            $table->unique(['league', 'external_id']);
         });
     },
 

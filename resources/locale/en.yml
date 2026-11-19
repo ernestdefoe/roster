@@ -78,7 +78,7 @@ ernestdefoe-roster:
       Tick the competitions this site should carry rosters for. They all come
       from ESPN, which needs no key and costs nothing against your allowance.
       College football brings a class year with it; professional leagues have
-      no class, so that column stays empty for them.
+      no classes, so their rosters have no Class column.
     leagues_empty: >-
       No leagues were sent by the server. That is a broken install rather than
       an empty list — every build ships at least the ESPN competitions.

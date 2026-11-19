@@ -95,10 +95,11 @@ class RosterTest extends TestCase
     #[Test]
     public function the_forum_lists_the_leagues_it_holds_and_the_index_filters_by_one()
     {
+        $this->setting('ernestdefoe-roster.leagues', 'nfl,cfb');
         $this->withStrings();
 
         [, $forum] = $this->json('/api');
-        $this->assertSame([['key' => 'cfb', 'name' => 'College football'], ['key' => 'nfl', 'name' => 'NFL']], $forum['data']['attributes']['rosterLeagues']);
+        $this->assertSame([['key' => 'cfb', 'name' => 'College football'], ['key' => 'nfl', 'name' => 'NFL']], $forum['data']['attributes']['rosterLeagues'], 'In the registry\'s order');
 
         [$status, $body] = $this->json('/api/roster-teams', ['filter' => ['league' => 'cfb']]);
 
@@ -110,6 +111,26 @@ class RosterTest extends TestCase
         [, $body] = $this->json('/api/roster-teams', ['filter' => ['league' => 'nfl']]);
         $this->assertSame(['NFC North'], array_column(array_column($body['data'], 'attributes'), 'group'));
         $this->assertFalse($body['data'][0]['attributes']['collegiate']);
+    }
+
+    #[Test]
+    public function an_unticked_league_leaves_the_switcher()
+    {
+        $this->setting('ernestdefoe-roster.leagues', 'cfb,mlb');
+
+        [, $forum] = $this->json('/api');
+
+        $this->assertSame([['key' => 'cfb', 'name' => 'College football']], $forum['data']['attributes']['rosterLeagues'], 'NFL clubs are held but not followed; MLB is followed but holds none');
+    }
+
+    #[Test]
+    public function the_list_cannot_include_every_roster()
+    {
+        [$status, $body] = $this->json('/api/roster-teams', ['filter' => ['league' => 'cfb'], 'include' => 'players']);
+
+        $this->assertSame(200, $status);
+        $this->assertSame([], $this->included($body, 'roster-players'), 'The include is ignored on the list');
+        $this->assertArrayNotHasKey('players', $body['data'][0]['relationships'] ?? []);
     }
 
     #[Test]
@@ -243,6 +264,31 @@ class RosterTest extends TestCase
         $this->assertStringStartsWith('Rosters', $title('/roster'));
         $this->assertStringStartsWith('Alabama roster', $title('/roster/alabama'));
         $this->assertStringStartsWith('Ty Simpson — Alabama', $title('/roster/alabama/ty-simpson'));
+    }
+
+    #[Test]
+    public function the_index_costs_the_same_queries_for_four_clubs_or_forty()
+    {
+        $count = function (): int {
+            $db = $this->database();
+            $db->flushQueryLog();
+            $db->enableQueryLog();
+            [$status] = $this->json('/api/roster-teams', ['filter' => ['league' => 'cfb']]);
+            $this->assertSame(200, $status);
+
+            return count($db->getQueryLog());
+        };
+
+        $count(); // the first request also warms settings and caches
+        $few = $count();
+
+        $teams = [];
+        for ($id = 10; $id < 46; $id++) {
+            $teams[] = ['id' => $id, 'league' => 'cfb', 'name' => "Club $id", 'slug' => "club-$id", 'conference' => 'MAC', 'external_id' => (string) $id];
+        }
+        $this->prepareDatabase(['roster_teams' => $teams]);
+
+        $this->assertSame($few, $count());
     }
 
     #[Test]
